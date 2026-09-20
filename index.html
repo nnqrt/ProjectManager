@@ -26,7 +26,7 @@
       <form id="loginFormSection" onsubmit="handleLoginSubmit(event)">
         <div style="margin-bottom: 16px;">
           <label style="font-size: 14px; font-weight: 800; color: var(--primary-navy); display: block; margin-bottom: 4px;">접속 아이디 (또는 직함/이메일)</label>
-          <input type="text" id="loginIdInput" class="form-input" style="width: 100%; padding: 12px; font-size: 15px;"  value="mp" required>
+          <input type="text" id="loginIdInput" class="form-input" style="width: 100%; padding: 12px; font-size: 15px;"  value="nnqrt1983@gmail.com" required>
         </div>
         <div style="margin-bottom: 22px;">
           <label style="font-size: 14px; font-weight: 800; color: var(--primary-navy); display: block; margin-bottom: 4px;">비밀번호 (보안 인증)</label>
@@ -130,10 +130,10 @@
       <!-- User Profile Box -->
       <div class="sidebar-user-box">
         <div class="user-profile-card">
-          <div class="user-avatar" id="sidebarUserAvatar">의</div>
+          <div class="user-avatar" id="sidebarUserAvatar">최</div>
           <div>
-            <div class="user-info-name" id="sidebarUserName" style="cursor: pointer; text-decoration: underline; text-underline-offset: 2px;" onclick="openProfileDocModal()" title="프로필 문서 및 사진 등록">의원 OOO</div>
-            <div class="user-info-role" id="sidebarUserRole">의원</div>
+            <div class="user-info-name" id="sidebarUserName" style="cursor: pointer; text-decoration: underline; text-underline-offset: 2px;" onclick="openProfileDocModal()" title="프로필 문서 및 사진 등록">최고관리자</div>
+            <div class="user-info-role" id="sidebarUserRole">의원실 (총괄 최고관리자)</div>
           </div>
         </div>
         <div style="display: flex; gap: 4px; width: 100%; margin-top: 6px;">
@@ -199,7 +199,7 @@
 
         <div style="display: flex; align-items: center; gap: 8px;">
           <div class="top-header-user-status" id="topHeaderUserStatus">
-            현재 접속: 의원 OOO
+            현재 접속: 최고관리자 (의원실)
           </div>
           <button class="btn-outline" id="logoutHeaderBtn" style="border-color: #475569; color: #475569; font-weight: 800;" onclick="handleLogout()">로그아웃</button>
         </div>
@@ -1181,7 +1181,7 @@
   <!-- Korean Choseong Engine -->
   <script src="js/choseong.js"></script>
   <!-- Core Logic Engine -->
-  <script src="js/app.js?v=21"></script>
+  <script src="js/app.js?v=22"></script>
   <script>
     lucide.createIcons();
   </script>

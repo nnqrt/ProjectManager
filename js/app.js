@@ -967,10 +967,9 @@ function formatUserDisplay(u) {
    ========================================================================== */
 
 // --- PRODUCTION CLOUD FRESH INITIALIZATION ---
-if (localStorage.getItem('prod_cloud_deployed_v1') !== 'true') {
+if (localStorage.getItem('prod_cloud_deployed_v2') !== 'true') {
   localStorage.clear();
-  localStorage.setItem('prod_cloud_deployed_v1', 'true');
-  location.reload();
+  localStorage.setItem('prod_cloud_deployed_v2', 'true');
 }
 
 // --- SUPABASE CONFIGURATION ---
@@ -988,26 +987,14 @@ if (typeof window.supabase !== 'undefined' && SUPABASE_URL !== 'YOUR_SUPABASE_UR
 // --- OFFICIAL PRODUCTION USERS DATABASE ---
 const DEFAULT_USERS = [
   {
-    id: 'usr-000',
+    id: 'usr-001',
     name: '최고관리자',
-    team: '시스템관리',
-    roleTitle: '시스템관리 (관리자)',
+    team: '의원실',
+    roleTitle: '의원실 (총괄 최고관리자)',
     clearance: '1급',
     phone: '010-0000-0000',
-    email: 'admin@assembly.go.kr',
-    avatar: '관',
-    isAdmin: true,
-    status: 'APPROVED'
-  },
-  {
-    id: 'usr-001',
-    name: '의원 OOO',
-    team: '의원실',
-    roleTitle: '의원실 (의원)',
-    clearance: '1급',
-    phone: '010-0000-0001',
-    email: 'assembly@assembly.go.kr',
-    avatar: '의',
+    email: 'nnqrt1983@gmail.com',
+    avatar: '최',
     isAdmin: true,
     status: 'APPROVED'
   },
@@ -1058,7 +1045,7 @@ const DEFAULT_MSGS = [];
 // --- APP STATE ---
 let appState = {
   users: JSON.parse(localStorage.getItem('politic_sync_users')) || DEFAULT_USERS,
-  currentUser: JSON.parse(localStorage.getItem('politic_sync_current_user')) || DEFAULT_USERS[1],
+  currentUser: JSON.parse(localStorage.getItem('politic_sync_current_user')) || DEFAULT_USERS[0],
   tasks: JSON.parse(localStorage.getItem('politic_sync_tasks')) || DEFAULT_TASKS,
   crmList: JSON.parse(localStorage.getItem('politic_sync_crm')) || DEFAULT_CRM,
   schedules: JSON.parse(localStorage.getItem('politic_sync_schedules')) || DEFAULT_SCHEDULES,
@@ -1165,7 +1152,11 @@ async function handleLoginSubmit(e) {
       status: profile.status
     };
   } else {
-    let matchedUser = appState.users.find(u => u.email === emailVal);
+    const inputClean = emailVal.toLowerCase();
+    let matchedUser = appState.users.find(u => 
+      u.email.toLowerCase() === inputClean ||
+      (u.id === 'usr-001' && (inputClean === 'admin' || inputClean === 'mp' || inputClean === 'nnqrt' || inputClean === 'nnqrt1983@gmail.com'))
+    );
     if (!matchedUser) {
       alert("등록된 사용자 정보를 찾을 수 없습니다. 먼저 회원가입을 진행해주세요.");
       return;
