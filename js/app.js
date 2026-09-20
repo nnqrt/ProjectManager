@@ -1388,13 +1388,8 @@ function toggleTestMode() {
 
 // TEST MODE GATING AS REQUESTED
 function updateTestModeUI() {
-  const sidebarAuthText = document.getElementById('sidebarAuthBtnText');
   const switcherSec = document.getElementById('accountSwitcherSection');
   const loginModeBtn = document.getElementById('loginScreenModeBtn');
-
-  if (sidebarAuthText) {
-    sidebarAuthText.textContent = "[프로필]";
-  }
 
   if (loginModeBtn) {
     if (appState.isTestMode) {

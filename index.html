@@ -132,20 +132,16 @@
         <div class="user-profile-card">
           <div class="user-avatar" id="sidebarUserAvatar">최</div>
           <div>
-            <div class="user-info-name" id="sidebarUserName" style="cursor: pointer; text-decoration: underline; text-underline-offset: 2px;" onclick="openProfileDocModal()" title="프로필 문서 및 사진 등록">최고관리자</div>
+            <div class="user-info-name" id="sidebarUserName">최고관리자</div>
             <div class="user-info-role" id="sidebarUserRole">의원실 (총괄 최고관리자)</div>
           </div>
         </div>
-        <div style="display: flex; gap: 4px; width: 100%; margin-top: 6px;">
-          <button type="button" class="btn-outline" style="flex: 1; font-size: 11px; padding: 5px 2px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileModal()" title="개인 비밀번호 변경">
+        <div style="display: flex; gap: 6px; width: 100%; margin-top: 6px;">
+          <button type="button" class="btn-outline" style="flex: 1; font-size: 11px; padding: 6px 2px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileModal()" title="개인 비밀번호 변경">
             <span class="sidebar-link-text">비번 변경</span>
             <span style="display:none;" class="sidebar-collapsed-icon">PW</span>
           </button>
-          <button type="button" class="btn-outline" id="sidebarAuthBtn" style="flex: 1; font-size: 11px; padding: 5px 2px; color: #FFF; border-color: rgba(255,255,255,0.25);" onclick="openUserAuthModal()" title="사용자 전환 / 조직 관리">
-            <span class="sidebar-link-text" id="sidebarAuthBtnText">전환</span>
-            <span style="display:none;" class="sidebar-collapsed-icon">P</span>
-          </button>
-          <button type="button" class="btn-outline" id="sidebarLogoutBtn" style="font-size: 11px; padding: 5px 6px; color: #F87171; border-color: rgba(248,113,113,0.3);" onclick="handleLogout()" title="로그아웃">
+          <button type="button" class="btn-outline" id="sidebarLogoutBtn" style="flex: 1; font-size: 11px; padding: 6px 2px; color: #F87171; border-color: rgba(248,113,113,0.3);" onclick="handleLogout()" title="로그아웃">
             <span class="sidebar-link-text">로그아웃</span>
             <span style="display:none;" class="sidebar-collapsed-icon">X</span>
           </button>
@@ -1181,7 +1177,7 @@
   <!-- Korean Choseong Engine -->
   <script src="js/choseong.js"></script>
   <!-- Core Logic Engine -->
-  <script src="js/app.js?v=22"></script>
+  <script src="js/app.js?v=23"></script>
   <script>
     lucide.createIcons();
   </script>
