@@ -1820,7 +1820,7 @@ function switchTab(tabName) {
     else l.classList.remove('active');
   });
 
-  const views = ['seniorView', 'assigneeView', 'staffView', 'modulesView', 'createView', 'adminView'];
+  const views = ['seniorView', 'assigneeView', 'createView', 'staffView', 'modulesView', 'adminView'];
   views.forEach(v => {
     const el = document.getElementById(v);
     if (el) {
@@ -1832,9 +1832,9 @@ function switchTab(tabName) {
   const titles = {
     seniorView: '결재 대기',
     assigneeView: '업무 관리 및 접수',
+    createView: '신규 작성',
     staffView: '전체 안건',
     modulesView: '전체 메뉴',
-    createView: '신규 작성',
     adminView: '관리자 메뉴'
   };
   document.getElementById('currentTabTitle').textContent = titles[tabName] || '자유와혁신 Pro';
