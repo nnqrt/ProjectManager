@@ -59,38 +59,66 @@ html, body {
   height: 100vh;
   z-index: 100;
   border-right: 1px solid rgba(255,255,255,0.08);
-  transition: width 0.2s ease;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar.collapsed {
-  width: 76px;
+  width: 68px;
 }
 .sidebar.collapsed .sidebar-brand,
-.sidebar.collapsed .sidebar-badge,
-.sidebar.collapsed .user-info-name,
-.sidebar.collapsed .user-info-role,
-.sidebar.collapsed .sidebar-link-text {
+.sidebar.collapsed #sidebarSubtitle,
+.sidebar.collapsed .sidebar-toggle-top,
+.sidebar.collapsed .sidebar-user-box,
+.sidebar.collapsed .sidebar-nav,
+.sidebar.collapsed .sidebar-badge {
   display: none !important;
 }
 .sidebar.collapsed .sidebar-header {
   justify-content: center;
-  padding: 18px 10px;
+  padding: 18px 0;
+  border-bottom: none;
 }
-.sidebar.collapsed .user-profile-card {
-  justify-content: center;
-  margin-bottom: 0;
+.sidebar.collapsed #sidebarEmblemSlot {
+  width: 44px !important;
+  height: 44px !important;
+  margin: 0 auto;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.sidebar.collapsed .sidebar-link {
-  justify-content: center;
-  padding: 14px 0;
-  text-align: center;
+.sidebar.collapsed #sidebarEmblemSlot:hover {
+  transform: scale(1.1);
 }
-.sidebar.collapsed .sidebar-link-badge {
+.sidebar.collapsed #sidebarEmblemDefault {
+  font-size: 19px !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+}
+.sidebar.collapsed #sidebarEmblemImg {
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
+}
+.sidebar.collapsed .emblem-edit-badge {
+  display: none !important;
+}
+
+.emblem-edit-badge {
   position: absolute;
-  top: 6px;
-  right: 6px;
-  padding: 2px 6px;
+  bottom: -2px;
+  right: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #2563EB;
+  color: #FFF;
   font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #FFF;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+#sidebarEmblemSlot:hover .emblem-edit-badge {
+  opacity: 1;
 }
 .sidebar-link {
   position: relative;

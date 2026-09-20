@@ -114,10 +114,11 @@
     <aside class="sidebar" id="appSidebar">
       <div class="sidebar-header" style="align-items: center;">
         <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-          <div id="sidebarEmblemSlot" style="position: relative; width: 34px; height: 34px; flex-shrink: 0; cursor: pointer;" onclick="document.getElementById('emblemFileInput').click()" title="엠블럼 클릭하여 등록/변경">
+          <div id="sidebarEmblemSlot" style="position: relative; width: 36px; height: 36px; flex-shrink: 0; cursor: pointer; border-radius: 50%;" onclick="handleEmblemClick()" title="엠블럼 클릭하여 등록/수정">
             <img id="sidebarEmblemImg" src="" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: none; border: 1.5px solid rgba(255,255,255,0.4);">
             <div id="sidebarEmblemDefault" style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #1E3A8A, #3B82F6); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #FFF; border: 1.5px solid rgba(255,255,255,0.4);">혁</div>
             <input type="file" id="emblemFileInput" accept="image/*" style="display: none;" onchange="handleEmblemUpload(event)">
+            <div class="emblem-edit-badge" title="엠블럼 등록/수정">✎</div>
           </div>
           <div style="min-width: 0;">
             <div class="sidebar-brand" style="font-size: 17px; line-height: 1.2;">자유와혁신</div>
@@ -559,23 +560,30 @@
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
             <div>
-              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">의원실 공식 이메일</label>
-              <input type="email" id="regEmail" class="form-input" style="width: 100%; padding: 8px; font-size: 15px;"  required>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">의원실 공식 이메일 (접속 ID)</label>
+              <input type="email" id="regEmail" class="form-input" style="width: 100%; padding: 8px; font-size: 15px;" required>
             </div>
             <div>
               <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">보안 권한 및 결재 등급</label>
               <select id="regClearance" class="form-select" style="width: 100%; padding: 8px; font-size: 15px;" required>
                 <option value="1급">1급 (최종결재권자 / 의원실)</option>
-                <option value="2급">2급 (중간결재권자 / 보좌관 / 팀장)</option>
+                <option value="2급" selected>2급 (중간결재권자 / 보좌관 / 팀장)</option>
                 <option value="3급">3급 (일반 실무보좌진 / 비서관)</option>
+                <option value="회계관리">회계관리 (예산/경비 결산 담당)</option>
               </select>
             </div>
           </div>
 
+          <!-- Initial Password Policy Notice -->
+          <div style="background: #EFF6FF; border: 1px solid #BFDBFE; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 13px; color: #1E40AF; line-height: 1.5;">
+            <strong>🔑 초기 비밀번호 정책:</strong> 수동 등록 시 초기 비밀번호는 <strong>12345</strong>로 자동 부여됩니다.<br>
+            해당 회원이 시스템에 최초 로그인 시 <strong>비밀번호 변경 화면으로 즉시 연결</strong>됩니다.
+          </div>
+
           <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">
-            팀원 가입 신청
+            신규 회원 공식 등록 완료
           </button>
         </form>
       </div>
@@ -936,21 +944,30 @@
 
   <!-- PROFILE & PASSWORD MODAL -->
   <div id="profileModal" class="modal-overlay hidden">
-    <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-content" style="max-width: 420px;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">내 프로필 및 비밀번호 변경</h3>
-        <button onclick="closeProfileModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);" id="profileModalTitle">비밀번호 변경</h3>
+        <button id="profileModalCloseBtn" onclick="closeProfileModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
       </div>
+
+      <!-- Mandatory initial password notice -->
+      <div id="mustChangePasswordNotice" style="display: none; background: #FEF2F2; border: 1.5px solid #F87171; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px;">
+        <div style="font-size: 14px; font-weight: 900; color: #991B1B; margin-bottom: 4px;">⚠️ 초기 비밀번호(12345) 변경 안내</div>
+        <div style="font-size: 12px; color: #7F1D1D; line-height: 1.5;">
+          보안 정책에 따라 초기 임시 비밀번호로 로그인한 회원은 <strong>새로운 비밀번호(최소 6자 이상)로 즉시 변경</strong>해야 시스템을 이용하실 수 있습니다.
+        </div>
+      </div>
+
       <form onsubmit="handlePasswordChange(event)">
         <div style="margin-bottom: 12px;">
-          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">새로운 비밀번호</label>
-          <input type="password" id="newProfilePw" class="form-input" style="width: 100%; padding: 10px;" placeholder="변경할 비밀번호 입력" required>
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">새로운 비밀번호 (6자 이상)</label>
+          <input type="password" id="newProfilePw" class="form-input" style="width: 100%; padding: 10px;" placeholder="새 비밀번호 입력 (6자 이상)" required minlength="6">
         </div>
         <div style="margin-bottom: 18px;">
           <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">새로운 비밀번호 확인</label>
-          <input type="password" id="newProfilePwConfirm" class="form-input" style="width: 100%; padding: 10px;" placeholder="다시 한 번 입력" required>
+          <input type="password" id="newProfilePwConfirm" class="form-input" style="width: 100%; padding: 10px;" placeholder="새 비밀번호 다시 한 번 입력" required minlength="6">
         </div>
-        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">비밀번호 즉시 변경</button>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">새 비밀번호로 즉시 변경 및 저장</button>
       </form>
     </div>
   </div>
@@ -1100,59 +1117,6 @@
       </form>
     </div>
   </div>
-  
-  <!-- USER PROFILE DOCUMENT & PHOTO MODAL -->
-  <div id="profileDocModal" class="modal-overlay hidden">
-    <div class="modal-content" style="max-width: 540px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
-        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">개인 프로필 문서 및 사진 관리</h3>
-        <button onclick="closeProfileDocModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
-      </div>
-      <form onsubmit="handleProfileDocSubmit(event)">
-        <!-- Photo Section -->
-        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px; background: #F8FAFC; padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
-          <div id="profileDocPhotoPreview" style="width: 64px; height: 64px; border-radius: 50%; background: #1E3A8A; color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; overflow: hidden; border: 2px solid var(--border-color); flex-shrink: 0;">
-            의
-          </div>
-          <div style="flex: 1;">
-            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">프로필 증명사진 등록</label>
-            <input type="file" id="profileDocPhotoInput" accept="image/*" class="form-input" style="width: 100%; padding: 6px; font-size: 13px;" onchange="handleProfilePhotoChange(event)">
-          </div>
-        </div>
-
-        <!-- Name and Role info -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
-          <div>
-            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">이름</label>
-            <input type="text" id="profileDocName" class="form-input" style="width: 100%; padding: 8px; background: #F1F5F9;" readonly>
-          </div>
-          <div>
-            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">직책 / 권한</label>
-            <input type="text" id="profileDocRole" class="form-input" style="width: 100%; padding: 8px; background: #F1F5F9;" readonly>
-          </div>
-        </div>
-
-        <!-- Document Attachment -->
-        <div style="margin-bottom: 14px;">
-          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">프로필 / 이력서 / 의정활동 문서 등록 (PDF, HWP, DOCX)</label>
-          <input type="file" id="profileDocFileInput" accept=".pdf,.doc,.docx,.hwp,image/*" class="form-input" style="width: 100%; padding: 6px; font-size: 13px;">
-          <div id="profileDocFileStatus" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;"></div>
-        </div>
-
-        <!-- Bio / Notes -->
-        <div style="margin-bottom: 16px;">
-          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">주요 이력 및 비고 메모</label>
-          <textarea id="profileDocBio" class="form-textarea" rows="4" style="width: 100%; padding: 8px; line-height: 1.5;" placeholder="의원실 내 주요 담당 업무, 연락처, 주요 경력 등을 기록하세요."></textarea>
-        </div>
-
-        <div style="display: flex; gap: 10px;">
-          <button type="submit" class="btn-primary" style="flex: 1; height: 44px; font-size: 15px;">프로필 정보 저장</button>
-          <button type="button" class="btn-outline" style="width: 80px; height: 44px;" onclick="closeProfileDocModal()">닫기</button>
-        </div>
-      </form>
-    </div>
-  </div>
-  
   <!-- RESERVE BUDGET ADJUSTMENT MODAL -->
   <div id="reserveBudgetModal" class="modal-overlay hidden">
     <div class="modal-content" style="max-width: 520px;">
@@ -1247,7 +1211,7 @@
   <!-- Korean Choseong Engine -->
   <script src="js/choseong.js"></script>
   <!-- Core Logic Engine -->
-  <script src="js/app.js?v=28"></script>
+  <script src="js/app.js?v=29"></script>
   <script>
     lucide.createIcons();
   </script>

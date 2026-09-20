@@ -198,6 +198,17 @@ window.handleDeleteLedgerEntry = function(id) {
 
 
 // --- BRANDING (EMBLEM & SUBTITLE) LOGIC ---
+window.handleEmblemClick = function() {
+  if (appState.isSidebarCollapsed) {
+    // 접혀진 상태에서는 엠블럼 클릭 시 메뉴 펼침
+    toggleSidebar();
+  } else {
+    // 펼쳐진 상태에서는 엠블럼 등록/수정 파일 선택창 오픈
+    const fileInput = document.getElementById('emblemFileInput');
+    if (fileInput) fileInput.click();
+  }
+};
+
 window.handleEmblemUpload = function(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -216,7 +227,7 @@ window.handleEmblemUpload = function(event) {
       img.style.display = 'block';
       def.style.display = 'none';
     }
-    alert("당 엠블럼 로고가 성공적으로 등록되었습니다.");
+    alert("당 엠블럼 로고가 성공적으로 등록/수정되었습니다.");
   };
   reader.readAsDataURL(file);
 };
@@ -1162,6 +1173,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateTestModeUI();
   initGlobalESCListener();
   await fetchSupabaseProfiles();
+  if (appState.isLoggedIn && appState.currentUser && (appState.currentUser.mustChangePassword || appState.currentUser.isInitialPassword)) {
+    openMandatoryPasswordChangeModal();
+  }
 });
 
 function updateLoginScreenUI() {
@@ -1188,15 +1202,35 @@ async function handleLoginSubmit(e) {
     return;
   }
 
+  const isInitialPw = (pwVal === '12345');
+
   // Supabase Auth Integration
   if (supabaseClient) {
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
+    let authData = null;
+    let authError = null;
+
+    // First attempt standard sign in
+    const res1 = await supabaseClient.auth.signInWithPassword({
       email: emailVal,
       password: pwVal,
     });
-    
-    if (error) {
-      alert("로그인 실패: " + error.message);
+    authData = res1.data;
+    authError = res1.error;
+
+    // If failed and initial password 12345 was entered, attempt with internal fallback 12345_init (Supabase min 6-char rule)
+    if (authError && isInitialPw) {
+      const res2 = await supabaseClient.auth.signInWithPassword({
+        email: emailVal,
+        password: '12345_init',
+      });
+      if (!res2.error && res2.data) {
+        authData = res2.data;
+        authError = null;
+      }
+    }
+
+    if (authError || !authData || !authData.user) {
+      alert("로그인 실패: " + (authError ? authError.message : "아이디 또는 비밀번호가 올바르지 않습니다."));
       return;
     }
     
@@ -1204,7 +1238,7 @@ async function handleLoginSubmit(e) {
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('*')
-      .eq('id', data.user.id)
+      .eq('id', authData.user.id)
       .single();
       
     if (profileError || !profile) {
@@ -1229,7 +1263,9 @@ async function handleLoginSubmit(e) {
       email: profile.email,
       avatar: profile.avatar || (profile.name ? profile.name.charAt(0) : '류'),
       isAdmin: profile.is_admin === true || profile.clearance === '1급' || profile.email === 'nnqrt1983@gmail.com',
-      status: profile.status
+      status: profile.status,
+      mustChangePassword: isInitialPw || profile.must_change_password === true,
+      isInitialPassword: isInitialPw
     };
 
     await fetchSupabaseProfiles();
@@ -1244,8 +1280,16 @@ async function handleLoginSubmit(e) {
       return;
     }
     if (matchedUser.status === 'PENDING' || matchedUser.status === 'PENDING_APPROVAL') {
-      alert("현재 가입 승인 대기 상태입니다.");
+      alert("현재 가입 승인 대기 상태입니다. 관리자 승인 후 로그인 가능합니다.");
       return;
+    }
+    if (matchedUser.password && matchedUser.password !== pwVal) {
+      alert("비밀번호가 일치하지 않습니다.");
+      return;
+    }
+    if (isInitialPw || matchedUser.mustChangePassword || matchedUser.isInitialPassword) {
+      matchedUser.mustChangePassword = true;
+      matchedUser.isInitialPassword = true;
     }
     appState.currentUser = matchedUser;
   }
@@ -1255,7 +1299,12 @@ async function handleLoginSubmit(e) {
   saveState();
   updateLoginScreenUI();
   renderApp();
-  alert(`로그인 완료 - ${appState.currentUser.name} (${appState.currentUser.roleTitle}) 계정으로 접속하였습니다.`);
+
+  if (isInitialPw || (appState.currentUser && (appState.currentUser.mustChangePassword || appState.currentUser.isInitialPassword))) {
+    openMandatoryPasswordChangeModal();
+  } else {
+    alert(`로그인 완료 - ${appState.currentUser.name} (${appState.currentUser.roleTitle}) 계정으로 접속하였습니다.`);
+  }
 }
 
 async function handleLogout() {
@@ -1372,8 +1421,10 @@ function initGlobalESCListener() {
 }
 
 function closeAllModals() {
+  const isMandatoryPw = appState.currentUser && (appState.currentUser.mustChangePassword || appState.currentUser.isInitialPassword);
   const modals = ['profileDocModal', 'profileModal', 'taskDetailModal', 'moduleDetailModal', 'approverSelectModal', 'userAuthModal', 'viewerAuditModal', 'scheduleCreateModal', 'simpleTaskCreateModal', 'eventCreateModal', 'vaultCreateModal', 'pressCreateModal', 'msgCreateModal', 'universalEditModal'];
   modals.forEach(id => {
+    if (id === 'profileModal' && isMandatoryPw) return;
     const el = document.getElementById(id);
     if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
   });
@@ -1444,20 +1495,24 @@ function toggleSidebar() {
   appState.isSidebarCollapsed = !appState.isSidebarCollapsed;
   const sidebar = document.getElementById('appSidebar');
   const topBtn = document.getElementById('sidebarTopToggleBtn');
+  const emblemSlot = document.getElementById('sidebarEmblemSlot');
   const texts = document.querySelectorAll('.sidebar-link-text');
   const icons = document.querySelectorAll('.sidebar-collapsed-icon');
 
   if (appState.isSidebarCollapsed) {
-    sidebar.classList.add('collapsed');
+    if (sidebar) sidebar.classList.add('collapsed');
     if (topBtn) topBtn.textContent = ">>";
+    if (emblemSlot) emblemSlot.setAttribute('title', '클릭하여 메뉴 펼치기');
     texts.forEach(el => el.style.setProperty('display', 'none', 'important'));
     icons.forEach(el => el.style.setProperty('display', 'inline', 'important'));
   } else {
-    sidebar.classList.remove('collapsed');
+    if (sidebar) sidebar.classList.remove('collapsed');
     if (topBtn) topBtn.textContent = "<<";
+    if (emblemSlot) emblemSlot.setAttribute('title', '클릭하여 엠블럼 이미지 등록 및 수정');
     texts.forEach(el => el.style.setProperty('display', 'inline', 'important'));
     icons.forEach(el => el.style.setProperty('display', 'none', 'important'));
   }
+  saveState();
 }
 
 function toggleTestMode() {
@@ -1591,34 +1646,95 @@ function switchUser(userId) {
   }
 }
 
-function handleRegisterUser(event) {
+async function handleRegisterUser(event) {
   event.preventDefault();
-  const name = document.getElementById('regName').value;
+  const name = document.getElementById('regName').value.trim();
   const team = document.getElementById('regTeam').value;
-  const title = document.getElementById('regTitle').value;
-  const phone = document.getElementById('regPhone').value;
-  const email = document.getElementById('regEmail').value;
+  const title = document.getElementById('regTitle').value.trim();
+  const phone = document.getElementById('regPhone').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
   const clearance = document.getElementById('regClearance').value;
 
+  if (!name || !email) {
+    alert("이름과 이메일을 입력해주세요.");
+    return;
+  }
+
+  // Check duplicate email
+  const existing = (appState.users || []).find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+  if (existing) {
+    alert("이미 등록된 이메일 계정입니다.");
+    return;
+  }
+
+  const roleTitle = `${team} (${title})`;
+  const avatarChar = name.charAt(0);
+  const initialPw = '12345';
+  let createdSupabaseId = null;
+
+  // Supabase Auth Integration
+  if (supabaseClient) {
+    try {
+      const { data, error } = await supabaseClient.auth.signUp({
+        email: email,
+        password: '12345_init',
+        options: {
+          data: {
+            name: name,
+            team: team,
+            roleTitle: roleTitle,
+            clearance: clearance,
+            phone: phone,
+            avatar: avatarChar,
+            mustChangePassword: true,
+            isInitialPassword: true
+          }
+        }
+      });
+      if (data && data.user) {
+        createdSupabaseId = data.user.id;
+        try {
+          await supabaseClient.from('profiles').update({
+            status: 'APPROVED',
+            clearance: clearance,
+            role_title: roleTitle,
+            must_change_password: true
+          }).eq('id', createdSupabaseId);
+        } catch(e) {
+          console.warn("Supabase profile update warning:", e);
+        }
+      }
+    } catch(e) {
+      console.warn("Supabase manual registration error:", e);
+    }
+  }
+
   const newUser = {
-    id: `usr-${Date.now()}`,
+    id: createdSupabaseId || `usr-${Date.now()}`,
     name: name,
     team: team,
-    roleTitle: `${team} (${title})`,
+    roleTitle: roleTitle,
     clearance: clearance,
     phone: phone,
     email: email,
-    avatar: name.slice(0, 1),
-    status: 'PENDING_APPROVAL' // REQUESTED: ADMIN APPROVAL REQUIRED
+    avatar: avatarChar,
+    password: initialPw,
+    mustChangePassword: true,
+    isInitialPassword: true,
+    status: 'APPROVED', // 관리자 수동 등록이므로 즉시 활동 가능
+    isAdmin: clearance === '1급'
   };
 
   appState.users.push(newUser);
   saveState();
 
   populateFormChecklists();
-  openUserAuthModal();
-  alert(`가입 신청 완료 - ${name} 님의 정식 팀원 가입 신청이 접수되었습니다.\n보안 규정에 따라 1급 관리자(의원실)의 승인 후 정식 활동 및 전환이 가능합니다.`);
+  closeUserAuthModal();
+  if (appState.activeTab === 'adminView') {
+    renderAdminView();
+  }
   renderApp();
+  alert(`신규 회원 공식 등록 완료: ${name} 님의 계정이 등록되었습니다.\n초기 비밀번호는 [12345]로 설정되었으며, 해당 회원이 로그인 시 비밀번호 변경 화면으로 자동 연결됩니다.`);
 }
 
 // --- FORM SELECTORS & POPUPS ---
@@ -1868,6 +1984,28 @@ function renderApp() {
   const subtitleEl = document.getElementById('sidebarSubtitle');
   if (subtitleEl && appState.branding.subtitle) {
     subtitleEl.textContent = appState.branding.subtitle;
+  }
+
+  // Sync Sidebar Collapsed State & Tooltip
+  const sidebar = document.getElementById('appSidebar');
+  const topBtn = document.getElementById('sidebarTopToggleBtn');
+  const emblemSlot = document.getElementById('sidebarEmblemSlot');
+  const texts = document.querySelectorAll('.sidebar-link-text');
+  const icons = document.querySelectorAll('.sidebar-collapsed-icon');
+  if (sidebar) {
+    if (appState.isSidebarCollapsed) {
+      sidebar.classList.add('collapsed');
+      if (topBtn) topBtn.textContent = ">>";
+      if (emblemSlot) emblemSlot.setAttribute('title', '클릭하여 메뉴 펼치기');
+      texts.forEach(el => el.style.setProperty('display', 'none', 'important'));
+      icons.forEach(el => el.style.setProperty('display', 'inline', 'important'));
+    } else {
+      sidebar.classList.remove('collapsed');
+      if (topBtn) topBtn.textContent = "<<";
+      if (emblemSlot) emblemSlot.setAttribute('title', '클릭하여 엠블럼 이미지 등록 및 수정');
+      texts.forEach(el => el.style.setProperty('display', 'inline', 'important'));
+      icons.forEach(el => el.style.setProperty('display', 'none', 'important'));
+    }
   }
 
   // Restore User Avatar (Photo or Text)
@@ -3852,14 +3990,49 @@ function handleVaultCreateSubmit(e) {
 }
 
 // --- PROFILE & PASSWORD MODAL ---
+window.openMandatoryPasswordChangeModal = function() {
+  const modal = document.getElementById('profileModal');
+  const title = document.getElementById('profileModalTitle');
+  const notice = document.getElementById('mustChangePasswordNotice');
+  const closeBtn = document.getElementById('profileModalCloseBtn');
+
+  if (title) title.textContent = "보안 비밀번호 변경 (필수)";
+  if (notice) notice.style.display = 'block';
+  if (closeBtn) closeBtn.style.display = 'none';
+
+  const p1 = document.getElementById('newProfilePw');
+  const p2 = document.getElementById('newProfilePwConfirm');
+  if (p1) p1.value = '';
+  if (p2) p2.value = '';
+
+  if (modal) modal.classList.remove('hidden');
+};
+
 window.openProfileModal = function() {
-  document.getElementById('newProfilePw').value = '';
-  document.getElementById('newProfilePwConfirm').value = '';
-  document.getElementById('profileModal').classList.remove('hidden');
+  const modal = document.getElementById('profileModal');
+  const title = document.getElementById('profileModalTitle');
+  const notice = document.getElementById('mustChangePasswordNotice');
+  const closeBtn = document.getElementById('profileModalCloseBtn');
+
+  if (title) title.textContent = "비밀번호 변경";
+  if (notice) notice.style.display = 'none';
+  if (closeBtn) closeBtn.style.display = 'block';
+
+  const p1 = document.getElementById('newProfilePw');
+  const p2 = document.getElementById('newProfilePwConfirm');
+  if (p1) p1.value = '';
+  if (p2) p2.value = '';
+
+  if (modal) modal.classList.remove('hidden');
 };
 
 window.closeProfileModal = function() {
-  document.getElementById('profileModal').classList.add('hidden');
+  if (appState.currentUser && (appState.currentUser.mustChangePassword || appState.currentUser.isInitialPassword)) {
+    alert("보안 정책상 초기 임시 비밀번호(12345)를 새로운 비밀번호로 변경해야 시스템을 이용하실 수 있습니다.");
+    return;
+  }
+  const modal = document.getElementById('profileModal');
+  if (modal) modal.classList.add('hidden');
 };
 
 window.handlePasswordChange = async function(e) {
@@ -3868,22 +4041,58 @@ window.handlePasswordChange = async function(e) {
   const pwConfirm = document.getElementById('newProfilePwConfirm').value.trim();
 
   if (!pw || pw !== pwConfirm) {
-    alert('비밀번호가 일치하지 않습니다.');
+    alert('비밀번호가 일치하지 않습니다. 다시 확인해주세요.');
+    return;
+  }
+  if (pw.length < 6) {
+    alert('보안 강화를 위해 비밀번호는 최소 6자 이상이어야 합니다.');
+    return;
+  }
+  if (pw === '12345') {
+    alert('초기 임시 비밀번호(12345)와 다른 새로운 비밀번호를 설정해주세요.');
     return;
   }
 
   if (supabaseClient) {
-    const { data, error } = await supabaseClient.auth.updateUser({ password: pw });
-    if (error) {
-      alert('비밀번호 변경 실패: ' + error.message);
-      return;
+    try {
+      const { data, error } = await supabaseClient.auth.updateUser({ password: pw });
+      if (error) {
+        alert('비밀번호 변경 실패: ' + error.message);
+        return;
+      }
+      try {
+        await supabaseClient.from('profiles').update({ must_change_password: false }).eq('id', appState.currentUser.id);
+      } catch(err) {
+        console.warn("Profile must_change_password update warning:", err);
+      }
+    } catch(err) {
+      console.warn("Supabase updateUser error:", err);
     }
-    alert('비밀번호가 성공적으로 변경되었습니다.');
-    closeProfileModal();
-  } else {
-    alert('현재 로컬 테스트 모드이므로 비밀번호 변경이 시뮬레이션 되었습니다.');
-    closeProfileModal();
   }
+
+  if (appState.currentUser) {
+    appState.currentUser.mustChangePassword = false;
+    appState.currentUser.isInitialPassword = false;
+    appState.currentUser.password = pw;
+  }
+  if (appState.users) {
+    const target = appState.users.find(u => u.id === appState.currentUser.id || u.email === appState.currentUser.email);
+    if (target) {
+      target.mustChangePassword = false;
+      target.isInitialPassword = false;
+      target.password = pw;
+    }
+  }
+  saveState();
+
+  const notice = document.getElementById('mustChangePasswordNotice');
+  if (notice) notice.style.display = 'none';
+  const closeBtn = document.getElementById('profileModalCloseBtn');
+  if (closeBtn) closeBtn.style.display = 'block';
+  const modal = document.getElementById('profileModal');
+  if (modal) modal.classList.add('hidden');
+
+  alert('비밀번호가 성공적으로 변경되었습니다. 정상적으로 시스템을 이용하실 수 있습니다.');
 };
 
 // --- UNIVERSAL EDIT/DELETE MODAL HANDLERS ---
