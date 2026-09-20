@@ -132,20 +132,16 @@
         <div class="user-profile-card" onclick="openProfileDocModal()" style="cursor: pointer;" title="클릭하여 프로필 사진 및 정보 관리">
           <div class="user-avatar" id="sidebarUserAvatar">류</div>
           <div style="min-width: 0;">
-            <div class="user-info-name" id="sidebarUserName" style="text-decoration: underline; text-underline-offset: 3px; cursor: pointer;" title="클릭하여 프로필/사진 변경">류민우</div>
+            <div class="user-info-name" id="sidebarUserName" style="text-decoration: underline; text-underline-offset: 3px; cursor: pointer;" title="클릭하여 프로필 설정">류민우</div>
             <div class="user-info-role" id="sidebarUserRole">의원실 (당협추진위원장)</div>
           </div>
         </div>
         <div style="display: flex; gap: 6px; width: 100%; margin-top: 6px;">
-          <button type="button" class="btn-outline" style="flex: 1; font-size: 11px; padding: 6px 2px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileDocModal()" title="프로필 및 사진 변경">
-            <span class="sidebar-link-text">프로필/사진</span>
+          <button type="button" class="btn-outline" style="flex: 1; font-size: 12px; padding: 6px 4px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileDocModal()" title="프로필 설정 및 사진 등록">
+            <span class="sidebar-link-text">프로필</span>
             <span style="display:none;" class="sidebar-collapsed-icon">MY</span>
           </button>
-          <button type="button" class="btn-outline" style="flex: 1; font-size: 11px; padding: 6px 2px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileModal()" title="개인 비밀번호 변경">
-            <span class="sidebar-link-text">비번 변경</span>
-            <span style="display:none;" class="sidebar-collapsed-icon">PW</span>
-          </button>
-          <button type="button" class="btn-outline" id="sidebarLogoutBtn" style="flex: 1; font-size: 11px; padding: 6px 2px; color: #F87171; border-color: rgba(248,113,113,0.3);" onclick="handleLogout()" title="로그아웃">
+          <button type="button" class="btn-outline" id="sidebarLogoutBtn" style="flex: 1; font-size: 12px; padding: 6px 4px; color: #F87171; border-color: rgba(248,113,113,0.3);" onclick="handleLogout()" title="로그아웃">
             <span class="sidebar-link-text">로그아웃</span>
             <span style="display:none;" class="sidebar-collapsed-icon">X</span>
           </button>
@@ -201,7 +197,6 @@
           <div class="top-header-user-status" id="topHeaderUserStatus">
             현재 접속: 류민우 (의원실)
           </div>
-          <button class="btn-outline" id="logoutHeaderBtn" style="border-color: #475569; color: #475569; font-weight: 800;" onclick="handleLogout()">로그아웃</button>
         </div>
       </header>
 
@@ -443,11 +438,11 @@
                   관리자 메뉴
                 </span>
                 <span style="font-size: 13px; font-weight: 700; color: #7F1D1D; margin-left: 8px;">
-                  인력 가입 승인 및 시스템 관리
+                  회원 가입 승인 및 시스템 관리
                 </span>
               </div>
               <div class="module-subnav" id="adminSubNav" style="background:#FFF; padding:4px; border-radius:8px; border:1px solid #991B1B;">
-                <button class="module-tab-btn active" style="background:#991B1B; color:#FFF; border-color:#991B1B;" onclick="switchAdminTab('adm-users')">1.조직 인력/가입승인</button>
+                <button class="module-tab-btn active" style="background:#991B1B; color:#FFF; border-color:#991B1B;" onclick="switchAdminTab('adm-users')">1.회원/가입승인</button>
                 <button class="module-tab-btn" onclick="switchAdminTab('adm-pipeline')">2.전사 안건 직권통제</button>
                 <button class="module-tab-btn" onclick="switchAdminTab('adm-audit')">3.보안감사 및 복구센터</button>
                 <button class="module-tab-btn" onclick="switchAdminTab('adm-finance')" id="adminFinanceTabBtn" style="border-color: #047857; color: #047857; font-weight: 800;">4.회계 장부</button>
@@ -522,7 +517,7 @@
 
       <!-- ADMIN APPROVAL WAITING PANEL -->
       <div id="adminApprovalSection" style="display:none; margin-bottom: 22px; border: 2px solid #DC2626; background: #FEF2F2; padding: 14px; border-radius: 8px;">
-        <h4 style="font-size: 15px; font-weight: 900; color: #991B1B; margin-bottom: 8px;">신규 팀원 가입 승인 대기 목록</h4>
+        <h4 style="font-size: 15px; font-weight: 900; color: #991B1B; margin-bottom: 8px;">신규 회원 가입 승인 대기 목록</h4>
         <div id="pendingUserListContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
       </div>
 
@@ -533,7 +528,7 @@
       </div>
 
       <div style="border-top: 1px dashed var(--border-color); padding-top: 16px;">
-        <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 10px;">2. 신규 정식 팀원 가입 (가입 완료 후 관리자 승인 필수)</h4>
+        <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 10px;">2. 신규 회원 수동 등록 (등록 완료 후 1급 관리자 승인 필수)</h4>
         <form onsubmit="handleRegisterUser(event)">
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
             <div>
@@ -915,9 +910,20 @@
           </div>
         </div>
 
-        <div style="margin-bottom: 18px;">
+        <div style="margin-bottom: 16px;">
           <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">소개 / 업무 메모</label>
           <textarea id="profileDocBio" class="form-textarea" rows="2" style="width: 100%; padding: 8px 10px;" placeholder="소개글 또는 당무 관련 메모를 입력할 수 있습니다."></textarea>
+        </div>
+
+        <!-- Password Change Action in Profile Modal -->
+        <div style="margin-bottom: 18px; background: #F8FAFC; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 13px; font-weight: 800; color: var(--primary-navy);">보안 비밀번호 변경</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">로그인 시 사용하는 비밀번호를 안전하게 재설정합니다.</div>
+          </div>
+          <button type="button" class="btn-outline" style="font-size: 12px; padding: 6px 12px; border-color: var(--primary-navy); color: var(--primary-navy); font-weight: 800; background: #FFF;" onclick="openProfileModal()">
+            비번 변경
+          </button>
         </div>
 
         <div style="display: flex; gap: 8px;">
@@ -1241,7 +1247,7 @@
   <!-- Korean Choseong Engine -->
   <script src="js/choseong.js"></script>
   <!-- Core Logic Engine -->
-  <script src="js/app.js?v=25"></script>
+  <script src="js/app.js?v=26"></script>
   <script>
     lucide.createIcons();
   </script>

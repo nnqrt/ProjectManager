@@ -1018,9 +1018,9 @@ function formatUserDisplay(u) {
    ========================================================================== */
 
 // --- PRODUCTION CLOUD FRESH INITIALIZATION ---
-if (localStorage.getItem('prod_cloud_deployed_v4') !== 'true') {
+if (localStorage.getItem('prod_cloud_deployed_v5') !== 'true') {
   localStorage.clear();
-  localStorage.setItem('prod_cloud_deployed_v4', 'true');
+  localStorage.setItem('prod_cloud_deployed_v5', 'true');
 }
 
 // --- SUPABASE CONFIGURATION ---
@@ -4475,7 +4475,7 @@ function renderAdminUsersTab(area) {
   if (pendingUsers.length > 0) {
     pendingHTML = `
       <div style="border: 2px solid #DC2626; background: #FEF2F2; padding: 14px; border-radius: 8px; margin-bottom: 18px;">
-        <h4 style="font-size: 16px; font-weight: 900; color: #991B1B; margin-bottom: 10px;">[긴급 승인 대기] 신규 가입 신청자 (${pendingUsers.length}명) - 승인 시 즉시 활동 가능</h4>
+        <h4 style="font-size: 16px; font-weight: 900; color: #991B1B; margin-bottom: 10px;">[긴급 승인 대기] 신규 회원 가입 신청자 (${pendingUsers.length}명) - 승인 시 즉시 활동 가능</h4>
         <div style="display: flex; flex-direction: column; gap: 8px;">
           ${pendingUsers.map(u => `
             <div style="background: #FFF; border: 1px solid #991B1B; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
@@ -4498,8 +4498,8 @@ function renderAdminUsersTab(area) {
     ${pendingHTML}
     <div class="card" style="margin-bottom: 0;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 2px solid var(--primary-navy); padding-bottom: 8px;">
-        <h3 style="font-size: 18px; font-weight: 900; color: var(--primary-navy);">의원실 전사 인력 조직 및 권한 등급 관리 (총 ${approvedUsers.length}명)</h3>
-        <button class="btn-outline" style="font-size: 13px; padding: 6px 12px;" onclick="openUserAuthModal()">+ 신규 팀원 수동 등록</button>
+        <h3 style="font-size: 18px; font-weight: 900; color: var(--primary-navy);">의원실 회원 및 권한 등급 관리 (총 ${approvedUsers.length}명)</h3>
+        <button class="btn-outline" style="font-size: 13px; padding: 6px 12px;" onclick="openUserAuthModal()">+ 신규 회원 수동 등록</button>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -4785,7 +4785,7 @@ function renderAdminConfigTab(area) {
         <div style="background: #F8FAFC; border: 1px solid var(--border-color); padding: 16px; border-radius: 8px;">
           <h4 style="font-size: 15px; font-weight: 900; color: var(--primary-navy); margin-bottom: 8px;">전사 데이터 백업 및 복원</h4>
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-            의원실 전체 안건, 10대 사무, 조직 인력 DB를 JSON 파일로 다운로드하거나 복원합니다.
+            의원실 전체 안건, 10대 사무, 회원 DB를 JSON 파일로 다운로드하거나 복원합니다.
           </p>
           <div style="display: flex; gap: 8px;">
             <button class="btn-outline" style="flex: 1; height: 44px; font-size: 13px; background: #FFF;" onclick="adminExportJSON()">JSON 데이터 다운로드</button>
