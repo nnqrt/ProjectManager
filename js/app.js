@@ -1018,9 +1018,9 @@ function formatUserDisplay(u) {
    ========================================================================== */
 
 // --- PRODUCTION CLOUD FRESH INITIALIZATION ---
-if (localStorage.getItem('prod_cloud_deployed_v5') !== 'true') {
+if (localStorage.getItem('prod_cloud_deployed_v6') !== 'true') {
   localStorage.clear();
-  localStorage.setItem('prod_cloud_deployed_v5', 'true');
+  localStorage.setItem('prod_cloud_deployed_v6', 'true');
 }
 
 // --- SUPABASE CONFIGURATION ---
@@ -1145,7 +1145,12 @@ let appState = {
   isTestMode: false,
   isSidebarCollapsed: false,
   isLoggedIn: localStorage.getItem('politic_sync_logged_in') === 'true',
-  hideCompletedSimpleTasks: true
+  hideCompletedSimpleTasks: true,
+  accountingSettings: JSON.parse(localStorage.getItem('politic_sync_accounting_settings')) || {
+    totalBudget: 0,
+    reserveBudget: 0
+  },
+  accountingLedger: JSON.parse(localStorage.getItem('politic_sync_accounting_ledger')) || []
 };
 
 // --- INITIALIZATION ---
@@ -1387,6 +1392,8 @@ function saveState() {
   localStorage.setItem('politic_sync_press', JSON.stringify(appState.pressList));
   localStorage.setItem('politic_sync_msgs', JSON.stringify(appState.msgList));
   localStorage.setItem('politic_sync_trash', JSON.stringify(appState.trashBin || []));
+  localStorage.setItem('politic_sync_accounting_settings', JSON.stringify(appState.accountingSettings || { totalBudget: 0, reserveBudget: 0 }));
+  localStorage.setItem('politic_sync_accounting_ledger', JSON.stringify(appState.accountingLedger || []));
 }
 
 function resetSystemData() {
@@ -1412,6 +1419,8 @@ function resetSystemData() {
   appState.selectedMidReviewers = [];
   appState.selectedCoopStaff = [];
   appState.currentAttachedPhotos = [];
+  appState.accountingSettings = { totalBudget: 0, reserveBudget: 0 };
+  appState.accountingLedger = [];
   saveState();
   populateFormChecklists();
   renderApp();
@@ -4887,10 +4896,10 @@ function renderAdminFinanceTab(area) {
     return;
   }
 
-  if (!appState.accountingSettings) {
+  if (!appState.accountingSettings || appState.accountingSettings.totalBudget === 150000000) {
     appState.accountingSettings = {
-      totalBudget: 150000000,
-      reserveBudget: 20000000
+      totalBudget: 0,
+      reserveBudget: 0
     };
     saveState();
   }
