@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>자유와혁신 Pro Enterprise - 정치사무 결재 및 업무 관리 플랫폼</title>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Executive Design System CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- INITIAL LOGIN & REGISTRATION SCREEN AS REQUESTED -->
+  <div id="loginScreen">
+    <div class="login-card">
+      <div class="login-title">자유와혁신 Pro Enterprise</div>
+      <div class="login-subtitle">전자결재 및 업무 통합 플랫폼</div>
+
+      <!-- Login Form -->
+      <form id="loginFormSection" onsubmit="handleLoginSubmit(event)">
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; color: var(--primary-navy); display: block; margin-bottom: 4px;">접속 아이디 (또는 직함/이메일)</label>
+          <input type="text" id="loginIdInput" class="form-input" style="width: 100%; padding: 12px; font-size: 15px;"  value="mp" required>
+        </div>
+        <div style="margin-bottom: 22px;">
+          <label style="font-size: 14px; font-weight: 800; color: var(--primary-navy); display: block; margin-bottom: 4px;">비밀번호 (보안 인증)</label>
+          <input type="password" id="loginPwInput" class="form-input" style="width: 100%; padding: 12px; font-size: 15px;" placeholder="비밀번호 입력..." required>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 52px; font-size: 17px; margin-bottom: 12px;">보안 로그인 및 의원실 시스템 접속</button>
+        <button type="button" class="btn-outline" style="width: 100%; height: 46px; font-size: 15px; border-color: var(--primary-navy); color: var(--primary-navy);" onclick="toggleLoginRegSection()">
+          신규 공식 회원가입
+        </button>
+      </form>
+
+      <!-- Registration Form (Toggleable inside Login Screen) -->
+      <form id="loginRegFormSection" class="hidden" onsubmit="handleLoginRegSubmit(event)">
+        <h4 style="font-size: 16px; font-weight: 900; color: var(--primary-navy); margin-bottom: 12px; border-bottom: 2px solid var(--primary-navy); padding-bottom: 8px;">신규 팀원 회원가입 (가입 완료 후 관리자 승인 필수)</h4>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">이름 (성명)</label>
+            <input type="text" id="initRegName" class="form-input" style="width: 100%; padding: 8px; font-size: 14px;"  required>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">소속 팀 / 부서</label>
+            <select id="initRegTeam" class="form-select" style="width: 100%; padding: 8px; font-size: 14px;" required>
+              <option value="의원실">의원실 (의원/수석보좌관/사무국장)</option>
+              <option value="정책개발팀">정책개발팀 (입법/조례/공약)</option>
+              <option value="민원소통팀">민원소통팀 (지역민원/현장)</option>
+              <option value="홍보미디어팀">홍보미디어팀 (보도자료/SNS)</option>
+              <option value="예산행정팀">예산행정팀 (후원금/회계/일정)</option>
+              <option value="지역조직팀">지역조직팀 (당원/상인회/청년)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">직함 / 직급</label>
+            <input type="text" id="initRegTitle" class="form-input" style="width: 100%; padding: 8px; font-size: 14px;"  required>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">휴대전화 번호</label>
+            <input type="tel" id="initRegPhone" class="form-input" style="width: 100%; padding: 8px; font-size: 14px;" placeholder="010-1234-5678" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">접속 아이디 (이메일)</label>
+          <input type="text" id="initRegId" class="form-input" style="width: 100%; padding: 8px; font-size: 14px;" placeholder="staff@assembly.go.kr" required>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">비밀번호 설정</label>
+            <input type="password" id="initRegPw" class="form-input" style="width: 100%; padding: 8px; font-size: 14px;" placeholder="비밀번호 입력" required>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">비밀번호 재확인</label>
+            <input type="password" id="initRegPwConfirm" class="form-input" style="width: 100%; padding: 8px; font-size: 14px;" placeholder="다시 한 번 입력" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">보안 권한 및 결재 등급</label>
+          <select id="initRegClearance" class="form-select" style="width: 100%; padding: 8px; font-size: 14px;" required>
+            <option value="1급">1급 (최종결재권자 / 의원실)</option>
+            <option value="2급">2급 (중간결재권자 / 보좌관 / 팀장)</option>
+            <option value="3급">3급 (일반 실무보좌진 / 비서관)</option>
+                <option value="회계관리">회계관리 (예산/경비 결산 담당)</option>
+            <option value="회계관리">회계관리 (예산/경비 결산 담당)</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 15px; margin-bottom: 8px;">
+          가입 신청 완료 (관리자 승인 대기 등록)
+        </button>
+        <button type="button" class="btn-outline" style="width: 100%; height: 42px; font-size: 14px;" onclick="toggleLoginRegSection()">
+          ◀ 기존 로그인 화면으로 돌아가기
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-shell hidden" id="mainAppShell">
+
+    <!-- Left Navigation Sidebar (Collapsible Supported) -->
+    <aside class="sidebar" id="appSidebar">
+      <div class="sidebar-header" style="align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+          <div id="sidebarEmblemSlot" style="position: relative; width: 34px; height: 34px; flex-shrink: 0; cursor: pointer;" onclick="document.getElementById('emblemFileInput').click()" title="엠블럼 클릭하여 등록/변경">
+            <img id="sidebarEmblemImg" src="" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: none; border: 1.5px solid rgba(255,255,255,0.4);">
+            <div id="sidebarEmblemDefault" style="width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #1E3A8A, #3B82F6); display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #FFF; border: 1.5px solid rgba(255,255,255,0.4);">혁</div>
+            <input type="file" id="emblemFileInput" accept="image/*" style="display: none;" onchange="handleEmblemUpload(event)">
+          </div>
+          <div style="min-width: 0;">
+            <div class="sidebar-brand" style="font-size: 17px; line-height: 1.2;">자유와혁신</div>
+            <div id="sidebarSubtitle" onclick="editSidebarSubtitle()" style="font-size: 12px; color: rgba(255,255,255,0.75); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; margin-top: 2px;" title="클릭하여 시당/당협 명칭 수정">인천시당</div>
+          </div>
+        </div>
+        <button class="sidebar-toggle-top" id="sidebarTopToggleBtn" onclick="toggleSidebar()" title="메뉴 접기 / 펴기">&lt;&lt;</button>
+      </div>
+
+      <!-- User Profile Box -->
+      <div class="sidebar-user-box">
+        <div class="user-profile-card">
+          <div class="user-avatar" id="sidebarUserAvatar">의</div>
+          <div>
+            <div class="user-info-name" id="sidebarUserName" style="cursor: pointer; text-decoration: underline; text-underline-offset: 2px;" onclick="openProfileDocModal()" title="프로필 문서 및 사진 등록">의원 OOO</div>
+            <div class="user-info-role" id="sidebarUserRole">의원</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 4px; width: 100%; margin-top: 6px;">
+          <button type="button" class="btn-outline" style="flex: 1; font-size: 11px; padding: 5px 2px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileModal()" title="개인 비밀번호 변경">
+            <span class="sidebar-link-text">비번 변경</span>
+            <span style="display:none;" class="sidebar-collapsed-icon">PW</span>
+          </button>
+          <button type="button" class="btn-outline" id="sidebarAuthBtn" style="flex: 1; font-size: 11px; padding: 5px 2px; color: #FFF; border-color: rgba(255,255,255,0.25);" onclick="openUserAuthModal()" title="사용자 전환 / 조직 관리">
+            <span class="sidebar-link-text" id="sidebarAuthBtnText">전환</span>
+            <span style="display:none;" class="sidebar-collapsed-icon">P</span>
+          </button>
+          <button type="button" class="btn-outline" id="sidebarLogoutBtn" style="font-size: 11px; padding: 5px 6px; color: #F87171; border-color: rgba(248,113,113,0.3);" onclick="handleLogout()" title="로그아웃">
+            <span class="sidebar-link-text">로그아웃</span>
+            <span style="display:none;" class="sidebar-collapsed-icon">X</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Sidebar Navigation Links -->
+      <nav class="sidebar-nav" id="sidebarNav">
+        <button class="sidebar-link active" data-tab="seniorView" onclick="switchTab('seniorView')" title="1. 결재 대기">
+          <span class="sidebar-link-text">1. 결재 대기</span>
+          <span class="sidebar-link-badge" id="pendingBadge">0</span>
+        </button>
+
+        <button class="sidebar-link" data-tab="assigneeView" onclick="switchTab('assigneeView')" title="2. 업무 관리">
+          <span class="sidebar-link-text">2. 업무 관리</span>
+          <span class="sidebar-link-badge" style="background-color: #2563EB;" id="assigneeBadge">0</span>
+        </button>
+
+        <button class="sidebar-link" data-tab="staffView" onclick="switchTab('staffView')" title="3. 전체 안건">
+          <span class="sidebar-link-text">3. 전체 안건</span>
+        </button>
+
+        <button class="sidebar-link" data-tab="modulesView" onclick="switchTab('modulesView')" title="4. 전체 메뉴">
+          <span class="sidebar-link-text">4. 전체 메뉴</span>
+        </button>
+
+        <button class="sidebar-link" data-tab="createView" onclick="switchTab('createView')" title="5. 신규 작성">
+          <span class="sidebar-link-text">5. 신규 작성</span>
+        </button>
+
+        <button class="sidebar-link" data-tab="adminView" onclick="switchTab('adminView')" title="6. 관리자 메뉴" id="sidebarAdminBtn" style="display: none;">
+          <span class="sidebar-link-text" style="color: #F87171; font-weight: 900;">6. 관리자 메뉴</span>
+          <span class="sidebar-link-badge" style="background-color: #991B1B;" id="adminBadge">1급</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Workspace Container -->
+    <div class="main-wrapper">
+      
+      <!-- Top App Header -->
+      <header class="top-header">
+        <div class="top-header-title" style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <span id="currentTabTitle">결재 대기</span>
+          <div id="seniorHeaderNavBox" style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; background: #F1F5F9; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <span>대기 안건 <strong id="seniorPendingCount" style="color: #DC2626; font-size: 15px;">0</strong>건</span>
+            <button class="btn-outline" style="padding: 2px 8px; font-size: 12px; background: #FFF; font-weight: 800;" onclick="prevSeniorTask()">이전</button>
+            <button class="btn-outline" style="padding: 2px 8px; font-size: 12px; background: #FFF; font-weight: 800;" onclick="nextSeniorTask()">다음</button>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="top-header-user-status" id="topHeaderUserStatus">
+            현재 접속: 의원 OOO
+          </div>
+          <button class="btn-outline" id="logoutHeaderBtn" style="border-color: #475569; color: #475569; font-weight: 800;" onclick="handleLogout()">로그아웃</button>
+        </div>
+      </header>
+
+      <!-- Main Content Canvas -->
+      <main class="content-canvas">
+
+        <!-- ================= VIEW 1: UNIFIED APPROVAL VIEW ================= -->
+        <section id="seniorView" class="view-section">
+          
+          <div class="desktop-grid-2col">
+            
+            <!-- Left Main Column -->
+            <div>
+              <!-- Main Task Card Container -->
+              <div id="seniorCardContainer">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Right Sidebar Column (TOP: APPROVAL ACTION CARD AS REQUESTED) -->
+            <div id="rightSidebarColumn">
+              <!-- Top Approval Action Card -->
+              <div class="card" style="margin-bottom: 16px; background: #F8FAFC; border: 2px solid var(--primary-navy);" id="seniorTopActionPanel">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Assignee Receipt Box -->
+              <div class="card" style="margin-bottom: 16px;" id="assigneeReceiptPanel">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Reader Audit Box -->
+              <div class="card" style="margin-bottom: 16px;" id="readerAuditPanel">
+                <!-- Rendered dynamically -->
+              </div>
+
+              <!-- Audit Timeline Card placed at bottom of right column as requested -->
+              <div class="card" id="seniorAuditTimelinePanel">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ================= VIEW 2: ASSIGNEE EXECUTION & OPEN CLAIM VIEW ================= -->
+        <section id="assigneeView" class="view-section hidden">
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-shrink: 0; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <h2 style="font-size: 22px; font-weight: 900; color: var(--primary-navy); margin-bottom: 4px;">
+                  업무 관리
+                </h2>
+                <p style="font-size: 14px; color: var(--text-muted); margin: 0;" id="assigneeViewSubTitle">
+                  할당된 업무 처리 및 실시간 진행사항 관리
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn-outline" id="btnAssigneeActiveTab" style="height: 40px; font-size: 14px; padding: 0 16px; font-weight: 900; background: var(--primary-navy); color: #FFF; border-color: var(--primary-navy);" onclick="switchAssigneeSubTab('active')">
+                  진행 중인 업무
+                </button>
+                <button class="btn-outline" id="btnAssigneeCompletedTab" style="height: 40px; font-size: 14px; padding: 0 16px; font-weight: 900; background: #FFF; color: #047857; border-color: #047857;" onclick="switchAssigneeSubTab('completed')">
+                  완료된 업무 (완료 페이지)
+                </button>
+              </div>
+            </div>
+
+            <!-- 2-Column Grid as Requested -->
+            <div id="assigneeTasksContainer" class="assignee-grid-2col" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 6px;">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= VIEW 3: STAFF EXCEL-STYLE 1-LINE TABLE VIEW ================= -->
+        <section id="staffView" class="view-section hidden">
+          <div class="card" style="flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; margin-bottom: 0;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink: 0;">
+              <h2 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">전체 안건 통합 관리</h2>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn-outline" onclick="exportTasksCSV()">CSV 내보내기</button>
+                <button class="btn-outline" onclick="triggerCSVImport()">CSV 가져오기</button>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="handleCSVImport(event)">
+              </div>
+            </div>
+
+            <!-- Real-time Search Input -->
+            <input type="text" id="staffSearchInput" class="form-input" style="width: 100%; padding: 12px; font-size: 15px; margin-bottom: 12px; flex-shrink: 0;" placeholder="검색어 입력..." oninput="handleStaffSearch(event)">
+
+            <div class="category-filter-list" id="categoryFilterContainer" style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; flex-shrink: 0;">
+              <!-- Rendered dynamically -->
+            </div>
+
+            <!-- Excel-Style Table Container -->
+            <div id="staffTaskListContainer" class="excel-table-container" style="flex: 1; overflow-y: auto; min-height: 0;">
+              <!-- Rendered dynamically as table -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= VIEW 4: 10 POLITICAL MODULES HUB ================= -->
+        <section id="modulesView" class="view-section hidden">
+          <div class="card" style="margin-bottom: 12px; padding: 12px; flex-shrink: 0;">
+            <div class="module-subnav" id="moduleSubNav">
+              <button class="module-tab-btn active" onclick="switchModuleTab('mod-dashboard')">1.통합 대시보드</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-schedule')">2.일정</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-complaints')">3.민원현황</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-tasks')">4.단순업무</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-crm')">5.당원/후원 CRM</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-events')">6.행사/현장관리</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-vault')">7.문서/공약보관</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-press')">8.언론모니터링</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-messenger')">9.메신저/음성</button>
+              <button class="module-tab-btn" onclick="switchModuleTab('mod-audit')">10.결재감사로그</button>
+            </div>
+          </div>
+
+          <div id="moduleContentArea" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 6px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </section>
+
+        <!-- ================= VIEW 5: CREATE TASK FORM (WITH POPUP SELECTOR & PHOTOS) ================= -->
+        <section id="createView" class="view-section hidden">
+          <div class="card" style="width: 100%; max-width: 100%; margin: 0; flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 16px;">
+
+            <form id="createTaskForm" onsubmit="handleCreateTask(event)" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 8px;">
+              
+              <!-- Basic Info -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <label style="font-size: 14px; font-weight: 800;">카테고리</label>
+                  <select class="form-select" id="newCategory" style="width: 100%; padding: 8px; border-radius: 6px; font-size: 14px;" onchange="handleNewCategoryChange(this.value)" required>
+                    <option value="민원">민원 (지역구/환경/안전)</option>
+                    <option value="일정행사">일정행사 (간담회/의정보고)</option>
+                    <option value="조직인사">조직인사 (당원/위원회)</option>
+                    <option value="홍보보도">홍보보도 (보도자료/성명서)</option>
+                    <option value="정책공약">정책공약 (법안/지역공약)</option>
+                    <option value="예산지출">예산지출 (후원금/경비)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style="font-size: 14px; font-weight: 800;">담당 실행자 지정 (선택)</label>
+                  <select class="form-select" id="newAssigneeSelect" style="width: 100%; padding: 8px; border-radius: 6px; font-size: 14px;">
+                    <option value="UNASSIGNED">자율 지정</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Dynamic Expense Amount Row (예산지출 카테고리 선택 시 표시) -->
+              <div id="expenseAmountRow" style="display: none; background: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px;">
+                <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px; color: #991B1B;">지출 집행 요청 금액 (원) - 승인 완료 시 예산 자동 차감</label>
+                <input type="number" class="form-input" id="newExpenseAmount" style="width: 100%; padding: 8px 12px; border-radius: 6px; font-size: 15px; font-weight: 900; color: #DC2626;" placeholder="0">
+              </div>
+
+              <!-- Approval & Cooperation Architecture Panel (POPUP SELECTOR BASED) -->
+              <div style="background-color: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                
+                <h4 style="font-size: 14px; font-weight: 900; color: var(--primary-navy); margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px;">
+                  결재 라인 및 협조 부서 지정 (팝업 검색 및 클릭 선택)
+                </h4>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; align-items: start;">
+                  <!-- 1. Cooperation Line (협조) -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <label style="font-size: 12px; font-weight: 800; color: var(--primary-navy);">1) 협조 부서 (별도 지정)</label>
+                      <button type="button" class="btn-outline" style="font-size: 11px; padding: 2px 6px; background: #FFF;" onclick="openApproverSelectModal('COOP')">+ 협조 추가</button>
+                    </div>
+                    <div id="newCoopUsersBox" class="popup-selector-box" style="min-height: 50px; max-height: 80px; overflow-y: auto; padding: 6px;">
+                      <span style="font-size: 12px; color: var(--text-muted);">지정된 협조 부서가 없습니다.</span>
+                    </div>
+                  </div>
+
+                  <!-- 2. Middle Reviewers (중간) -->
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <label style="font-size: 12px; font-weight: 800; color: var(--primary-navy);">2) 중간 결재자 (다중 선택)</label>
+                      <button type="button" class="btn-outline" style="font-size: 11px; padding: 2px 6px; background: #FFF;" onclick="openApproverSelectModal('MID')">+ 중간 추가</button>
+                    </div>
+                    <div id="newMidReviewersBox" class="popup-selector-box" style="min-height: 50px; max-height: 80px; overflow-y: auto; padding: 6px;">
+                      <span style="font-size: 12px; color: var(--text-muted);">지정된 중간 결재자가 없습니다.</span>
+                    </div>
+                  </div>
+
+                  <!-- 3. Final Approver (최종) -->
+                  <div>
+                    <label style="font-size: 12px; font-weight: 800; color: var(--primary-navy); display: block; margin-bottom: 4px;">3) 최종 결재자 (의원실/의원)</label>
+                    <select class="form-select" id="newFinalApproverSelect" style="width: 100%; padding: 6px; font-size: 13px; border-radius: 6px; height: 34px;" required>
+                      <!-- Populated dynamically -->
+                    </select>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Title & Location -->
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 3px;">안건 제목</label>
+                  <input type="text" class="form-input" id="newTitle" style="width: 100%; padding: 8px; border-radius: 6px; font-size: 15px;" placeholder="안건 제목을 입력하세요" required>
+                </div>
+                <div>
+                  <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 3px;">위치 / 장소 (선택)</label>
+                  <input type="text" class="form-input" id="newLocation" style="width: 100%; padding: 8px; border-radius: 6px; font-size: 15px;" placeholder="관련 위치를 입력하세요">
+                </div>
+              </div>
+
+              <!-- Photo / File Attachments -->
+              <div style="margin-bottom: 10px;">
+                <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 3px;">현장 사진 및 증빙 이미지 첨부 (선택)</label>
+                <input type="file" id="newPhotoInput" accept="image/*" multiple class="form-input" style="width: 100%; padding: 6px 10px; background: #FFF; border-radius: 6px; font-size: 13px;" onchange="handlePhotoPreview(event)">
+                <div id="photoPreviewContainer" class="photo-grid" style="margin-top: 4px;">
+                  <!-- Preview dynamically inserted -->
+                </div>
+              </div>
+
+              <!-- Core Report Content -->
+              <div style="margin-bottom: 12px;">
+                <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 3px;">핵심 보고 요약 및 상세 내용</label>
+                <textarea class="form-textarea" id="newSummary" rows="3" style="width: 100%; padding: 8px; border-radius: 6px; font-size: 14px; line-height: 1.5;" placeholder="핵심 요지 및 상세 내용을 작성하세요" required></textarea>
+              </div>
+
+              <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">
+                결재선 및 협조 라인 상정 완료
+              </button>
+            </form>
+          </div>
+        </section>
+
+        <!-- ================= VIEW 6: SYSTEM & ORG ADMIN CONTROL CENTER ================= -->
+        <section id="adminView" class="view-section hidden">
+          <div class="card" style="margin-bottom: 12px; padding: 14px; flex-shrink: 0; border: 2px solid #991B1B; background: #FEF2F2;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <span style="font-size: 18px; font-weight: 900; color: #991B1B;">
+                  관리자 메뉴
+                </span>
+                <span style="font-size: 13px; font-weight: 700; color: #7F1D1D; margin-left: 8px;">
+                  인력 가입 승인 및 시스템 관리
+                </span>
+              </div>
+              <div class="module-subnav" id="adminSubNav" style="background:#FFF; padding:4px; border-radius:8px; border:1px solid #991B1B;">
+                <button class="module-tab-btn active" style="background:#991B1B; color:#FFF; border-color:#991B1B;" onclick="switchAdminTab('adm-users')">1.조직 인력/가입승인</button>
+                <button class="module-tab-btn" onclick="switchAdminTab('adm-pipeline')">2.전사 안건 직권통제</button>
+                <button class="module-tab-btn" onclick="switchAdminTab('adm-audit')">3.보안감사 및 복구센터</button>
+                <button class="module-tab-btn" onclick="switchAdminTab('adm-finance')" id="adminFinanceTabBtn" style="border-color: #047857; color: #047857; font-weight: 800;">4.회계 장부</button>
+                <button class="module-tab-btn" onclick="switchAdminTab('adm-config')">5.시스템 설정/백업</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="adminContentArea" style="flex: 1; overflow-y: auto; min-height: 0; padding-right: 6px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+  </div>
+
+  <!-- TASK DETAIL INSPECTOR MODAL -->
+  <div id="taskDetailModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">안건 상세</h3>
+        <button onclick="closeTaskDetailModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <div id="taskDetailModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE DETAIL INSPECTOR MODAL -->
+  <div id="moduleDetailModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);" id="moduleDetailModalTitle">모듈 상세 정보</h3>
+        <button onclick="closeModuleDetailModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <div id="moduleDetailModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP APPROVER / COOPERATION SELECTOR MODAL -->
+  <div id="approverSelectModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);" id="approverModalTitle">결재자 / 협조자 선택</h3>
+        <button onclick="closeApproverSelectModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      
+      <input type="text" id="approverSearchInput" class="form-input" style="width: 100%; padding: 10px; margin-bottom: 14px;" placeholder="검색어 입력..." oninput="filterApproverModalList(event)">
+      
+      <div id="approverModalListContainer" style="max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px;">
+        <!-- Dynamically populated by team -->
+      </div>
+
+      <button type="button" class="btn-primary" style="width: 100%; height: 46px;" onclick="confirmApproverSelection()">
+        선택 완료
+      </button>
+    </div>
+  </div>
+
+  <!-- USER AUTH MODAL (ADMIN APPROVAL SUPPORTED) -->
+  <div id="userAuthModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">팀원 계정 전환 및 가입</h3>
+        <button onclick="closeUserAuthModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+
+      <!-- ADMIN APPROVAL WAITING PANEL -->
+      <div id="adminApprovalSection" style="display:none; margin-bottom: 22px; border: 2px solid #DC2626; background: #FEF2F2; padding: 14px; border-radius: 8px;">
+        <h4 style="font-size: 15px; font-weight: 900; color: #991B1B; margin-bottom: 8px;">신규 팀원 가입 승인 대기 목록</h4>
+        <div id="pendingUserListContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+
+      <!-- ACCOUNT SWITCHER -->
+      <div style="margin-bottom: 22px;" id="accountSwitcherSection">
+        <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 8px;">1. 접속 계정 전환 (테스트 모드 전용 기능)</h4>
+        <div id="userListContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+
+      <div style="border-top: 1px dashed var(--border-color); padding-top: 16px;">
+        <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 10px;">2. 신규 정식 팀원 가입 (가입 완료 후 관리자 승인 필수)</h4>
+        <form onsubmit="handleRegisterUser(event)">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">이름 (성명)</label>
+              <input type="text" id="regName" class="form-input" style="width: 100%; padding: 8px; font-size: 15px;"  required>
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">소속 팀 / 부서</label>
+              <select id="regTeam" class="form-select" style="width: 100%; padding: 8px; font-size: 15px;" required>
+                <option value="의원실">의원실 (의원/수석보좌관/사무국장)</option>
+                <option value="정책개발팀">정책개발팀 (입법/조례/공약)</option>
+                <option value="민원소통팀">민원소통팀 (지역민원/현장)</option>
+                <option value="홍보미디어팀">홍보미디어팀 (보도자료/SNS)</option>
+                <option value="예산행정팀">예산행정팀 (후원금/회계/일정)</option>
+                <option value="지역조직팀">지역조직팀 (당원/상인회/청년)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">직함 / 직급</label>
+              <input type="text" id="regTitle" class="form-input" style="width: 100%; padding: 8px; font-size: 15px;"  required>
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">휴대전화 번호 (긴급 연락처)</label>
+              <input type="tel" id="regPhone" class="form-input" style="width: 100%; padding: 8px; font-size: 15px;"  required>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">의원실 공식 이메일</label>
+              <input type="email" id="regEmail" class="form-input" style="width: 100%; padding: 8px; font-size: 15px;"  required>
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 700; display: block; margin-bottom: 2px;">보안 권한 및 결재 등급</label>
+              <select id="regClearance" class="form-select" style="width: 100%; padding: 8px; font-size: 15px;" required>
+                <option value="1급">1급 (최종결재권자 / 의원실)</option>
+                <option value="2급">2급 (중간결재권자 / 보좌관 / 팀장)</option>
+                <option value="3급">3급 (일반 실무보좌진 / 비서관)</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">
+            팀원 가입 신청
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEWER AUDIT MODAL -->
+  <div id="viewerAuditModal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 14px;">
+        <h3 style="font-size: 18px; font-weight: 900; color: var(--primary-navy);">열람 로그 타임라인</h3>
+        <button onclick="closeViewerAuditModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <div id="viewerAuditModalBody"></div>
+    </div>
+  </div>
+
+  <!-- NEW SCHEDULE CREATION MODAL AS REQUESTED -->
+  <div id="scheduleCreateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 580px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">일정 등록</h3>
+        <button onclick="closeScheduleCreateModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleScheduleCreateSubmit(event)">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">일정 / 행사 명칭</label>
+          <input type="text" id="schedTitleInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">날짜</label>
+            <input type="date" id="schedDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">시간</label>
+            <input type="time" id="schedTimeInput" class="form-input" style="width: 100%; padding: 10px;" value="14:00" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">장소 / 위치</label>
+            <input type="text" id="schedLocInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">D-Day 구분 태그</label>
+            <select id="schedDdayInput" class="form-select" style="width: 100%; padding: 10px;">
+              <option value="D-DAY">D-DAY (긴급 / 법정마감)</option>
+              <option value="D-3">D-3 (임박)</option>
+              <option value="D-7">D-7 (일주일전)</option>
+              <option value="회의">정기 회의</option>
+              <option value="행사">현장 행사</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; cursor: pointer;">
+            <input type="checkbox" id="schedAlarmInput" checked style="width: 18px; height: 18px;">
+            <span>1일 전 및 1시간 전 스마트폰 앱 및 오피스 푸시 알림 설정</span>
+          </label>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">
+          일정 등록
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- NEW SIMPLE TASK CREATION MODAL AS REQUESTED -->
+  <div id="simpleTaskCreateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 580px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">업무 추가</h3>
+        <button onclick="closeSimpleTaskCreateModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleSimpleTaskCreateSubmit(event)">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">업무 명칭 / 지시 내용</label>
+          <input type="text" id="simpleTitleInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">담당 실행자 지정</label>
+            <select id="simpleAssigneeInput" class="form-select" style="width: 100%; padding: 10px;" required>
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">초기 단계</label>
+            <select id="simpleStageInput" class="form-select" style="width: 100%; padding: 10px;">
+              <option value="대기">1. 대기 (수령전)</option>
+              <option value="진행중">2. 진행중 (수행중)</option>
+              <option value="완료">3. 완료 (보고완료)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">목표 마감일</label>
+          <input type="date" id="simpleDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">
+          업무 등록
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MOD-EVENTS CREATION MODAL -->
+  <div id="eventCreateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">행사 등록</h3>
+        <button onclick="closeEventCreateModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleEventCreateSubmit(event)">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">행사 명칭</label>
+          <input type="text" id="evTitleInput" class="form-input" style="width: 100%; padding: 10px;" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">시작 일시</label>
+            <input type="date" id="evDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">시작 시간</label>
+            <input type="time" id="evTimeInput" class="form-input" style="width: 100%; padding: 10px;" value="14:00" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">종료 일시</label>
+            <input type="date" id="evEndDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">종료 시간</label>
+            <input type="time" id="evEndTimeInput" class="form-input" style="width: 100%; padding: 10px;" value="16:00" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">장소</label>
+            <input type="text" id="evLocInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">요구참석자 수</label>
+            <input type="number" id="evCountInput" class="form-input" style="width: 100%; padding: 10px;" value="300" required>
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">배정 예산 (원)</label>
+          <input type="text" id="evBudgetInput" class="form-input" style="width: 100%; padding: 10px;" value="4500000" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">공식 행사 등록 및 실무진 배포</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MOD-VAULT CREATION MODAL -->
+  <div id="vaultCreateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">문서 등록</h3>
+        <button onclick="closeVaultCreateModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleVaultCreateSubmit(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">문서 분류 (카테고리)</label>
+            <select id="vltCatInput" class="form-select" style="width: 100%; padding: 10px;">
+              <option value="공약문서">공약문서 (총선/지선 지역공약)</option>
+              <option value="보도자료">보도자료 (공식 성명서/기자회견문)</option>
+              <option value="회의록">회의록 (의원실/상임위 비공개 회의)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">등록일</label>
+            <input type="date" id="vltDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">문서 제목</label>
+          <input type="text" id="vltTitleInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">사진 / 스캔 이미지 첨부</label>
+          <input type="file" id="vltPhotoInput" accept="image/*" class="form-input" style="width: 100%; padding: 6px 10px; background: #FFF;" onchange="handleVaultPhotoPreview(event)">
+          <div id="vaultPhotoPreview" style="margin-top: 8px; display: none;">
+            <img src="" style="max-height: 150px; border-radius: 8px; border: 1px solid var(--border-color);">
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">문서 전문 및 OCR 변환 텍스트</label>
+          <textarea id="vltContentInput" class="form-textarea" rows="5" style="width: 100%; padding: 10px;"  required></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">문서 등록</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MOD-PRESS CREATION MODAL -->
+  <div id="pressCreateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">기사 등록</h3>
+        <button onclick="closePressCreateModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handlePressCreateSubmit(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">언론사 명칭</label>
+            <input type="text" id="pressMediaInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">보도 성향 (논조)</label>
+            <select id="pressSentimentInput" class="form-select" style="width: 100%; padding: 10px;">
+              <option value="긍정">긍정 보도 (우호적)</option>
+              <option value="중립">중립 보도 (사실 전송)</option>
+              <option value="부정">부정 보도 (해명/대응 필요)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">기사 제목</label>
+          <input type="text" id="pressTitleInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">보도 일자</label>
+            <input type="date" id="pressDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">기사 원문 링크 (URL)</label>
+            <input type="text" id="pressUrlInput" class="form-input" style="width: 100%; padding: 10px;" placeholder="https://..." value="https://news.naver.com">
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">기사 요약 및 실무진 코멘트</label>
+          <textarea id="pressSummaryInput" class="form-textarea" rows="3" style="width: 100%; padding: 10px;"  required></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">기사 등록</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MOD-MESSENGER CREATION MODAL -->
+  <div id="msgCreateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 580px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">보고 등록</h3>
+        <button onclick="closeMsgCreateModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleMsgCreateSubmit(event)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">발신자 / 보고자 명칭</label>
+            <input type="text" id="msgSenderInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">보고 형식 (구분)</label>
+            <select id="msgTypeInput" class="form-select" style="width: 100%; padding: 10px;">
+              <option value="VOICE">음성 녹취 보고 (텍스트 자동 변환)</option>
+              <option value="TEXT">긴급 메신저 전문</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">보고 제목</label>
+          <input type="text" id="msgTitleInput" class="form-input" style="width: 100%; padding: 10px;"  required>
+        </div>
+        
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">음성 녹취 / 오디오 파일 첨부</label>
+          <input type="file" id="msgAudioInput" accept="audio/*,video/*" class="form-input" style="width: 100%; padding: 6px 10px; background: #FFF;" onchange="handleMsgAudioPreview(event)">
+          <div id="msgAudioPreviewContainer" style="margin-top: 6px; display: none;">
+            <audio id="msgAudioPlayerPreview" controls style="width: 100%; height: 36px;"></audio>
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">보고 상세 본문 및 음성 변환 스크립트</label>
+          <textarea id="msgContentInput" class="form-textarea" rows="4" style="width: 100%; padding: 10px;"  required></textarea>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">보고 등록</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- PROFILE & PASSWORD MODAL -->
+  <div id="profileModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 400px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">내 프로필 및 비밀번호 변경</h3>
+        <button onclick="closeProfileModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handlePasswordChange(event)">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">새로운 비밀번호</label>
+          <input type="password" id="newProfilePw" class="form-input" style="width: 100%; padding: 10px;" placeholder="변경할 비밀번호 입력" required>
+        </div>
+        <div style="margin-bottom: 18px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">새로운 비밀번호 확인</label>
+          <input type="password" id="newProfilePwConfirm" class="form-input" style="width: 100%; padding: 10px;" placeholder="다시 한 번 입력" required>
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">비밀번호 즉시 변경</button>
+      </form>
+    </div>
+  </div>
+
+  
+  
+  <!-- TASK PROGRESS UPDATE MODAL -->
+  <div id="progressModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 540px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">업무 진행 사항 및 중간 보고 등록</h3>
+        <button onclick="closeProgressModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleSubmitProgress(event)">
+        <input type="hidden" id="progressTaskId">
+        <div style="margin-bottom: 12px; background: #F8FAFC; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-color);">
+          <div style="font-size: 12px; font-weight: 800; color: var(--text-muted); margin-bottom: 2px;">대상 안건 명칭</div>
+          <div id="progressTaskTitle" style="font-size: 16px; font-weight: 900; color: var(--primary-navy);"></div>
+        </div>
+        <div style="margin-bottom: 14px; background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 13px; font-weight: 800; color: var(--text-dark);">진척도 드래그 조절</span>
+              <span id="modalProgressStageText" style="font-size: 13px; font-weight: 800; color: #2563EB;">초기 착수</span>
+            </div>
+            <span id="modalProgressPercentLabel" style="font-size: 16px; font-weight: 900; color: #2563EB;">30%</span>
+          </div>
+          <input type="range" min="0" max="100" step="5" value="30" id="modalProgressSlider" class="task-progress-slider"
+            style="width: 100%; background: linear-gradient(to right, #2563EB 30%, #E2E8F0 30%);"
+            oninput="handleModalProgressInput(this.value)">
+          <div style="display: flex; gap: 6px; margin-top: 8px;">
+            <button type="button" class="progress-quick-pill" onclick="setModalProgressQuick(0)">0%</button>
+            <button type="button" class="progress-quick-pill" onclick="setModalProgressQuick(25)">25%</button>
+            <button type="button" class="progress-quick-pill" onclick="setModalProgressQuick(50)">50%</button>
+            <button type="button" class="progress-quick-pill" onclick="setModalProgressQuick(75)">75%</button>
+            <button type="button" class="progress-quick-pill" onclick="setModalProgressQuick(100)" style="color: #10B981; font-weight: 900;">100%</button>
+          </div>
+          <input type="hidden" id="progressPercent" value="30">
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">진행 상황 상세 내용</label>
+          <textarea id="progressContent" class="form-textarea" rows="4" style="width: 100%; padding: 10px; line-height: 1.5;" placeholder="현재까지의 진행 상황, 현장 피드백, 협의 결과 등을 입력하세요. 결재자와 요청자가 즉시 확인할 수 있습니다." required></textarea>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn-primary" style="flex: 1; height: 44px; font-size: 15px;">진행사항 등록</button>
+          <button type="button" class="btn-outline" style="width: 80px; height: 44px;" onclick="closeProgressModal()">닫기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- EVENT DETAIL & EXPENSE/REPORT MODAL -->
+  <div id="eventDetailModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 650px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);" id="eventDetailModalTitle">행사 상세 및 경비·결과 보고서</h3>
+        <button onclick="closeEventDetailModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleEventReportSubmit(event)">
+        <input type="hidden" id="reportEventId">
+        
+        <div id="evReportApprovedNotice" style="display: none; background: #ECFDF5; border: 1px solid #A7F3D0; color: #065F46; padding: 10px 14px; border-radius: 8px; font-weight: 800; font-size: 13px; margin-bottom: 14px;">
+          ✔ 결재 승인 완료된 행사입니다. 예산 및 집행 경비 금액은 수정할 수 없도록 안전하게 보호 중입니다. (회계장부 자동 연동)
+        </div>
+
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span id="evModalStatusBadge" style="font-size: 12px; font-weight: 900; padding: 2px 8px; border-radius: 4px; background: #EEF2F6; color: var(--primary-navy);">준비중</span>
+            <span id="evModalDate" style="font-size: 13px; color: var(--text-muted); font-weight: 700;"></span>
+          </div>
+          <h4 id="evModalTitle" style="font-size: 18px; font-weight: 900; color: var(--primary-navy); margin-bottom: 6px;"></h4>
+          <div id="evModalLoc" style="font-size: 14px; color: var(--text-dark); font-weight: 700;"></div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">요구참석자 수</label>
+            <input type="number" id="evReportAttendees" class="form-input" style="width: 100%; padding: 8px;" required>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">배정 예산 (원)</label>
+            <input type="number" id="evReportBudget" class="form-input" style="width: 100%; padding: 8px;" required>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">실제 집행 경비 (원)</label>
+            <input type="number" id="evReportSpent" class="form-input" style="width: 100%; padding: 8px;" placeholder="0" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">행사 상세 결과 및 경비 집행 보고서</label>
+          <textarea id="evReportContent" class="form-textarea" rows="6" style="width: 100%; padding: 10px; line-height: 1.6;" placeholder="현장 참석자 피드백, 주요 성과, 예산 집행 세부 내역 및 결산 내용을 기록하세요."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn-outline" style="flex: 1; height: 46px; font-size: 14px; border-color: var(--primary-navy); color: var(--primary-navy); font-weight: 800; background: #FFF;" onclick="handleSaveEventReportOnly()">
+            경비 상세보고서 저장
+          </button>
+          <button type="button" class="btn-primary" style="flex: 1.3; height: 46px; font-size: 14px; background: #047857; border-color: #047857;" onclick="handleCreateApprovalFromEvent()">
+            결재 생성
+          </button>
+          <button type="button" class="btn-outline" style="width: 70px; height: 46px;" onclick="closeEventDetailModal()">닫기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- COMPLAINT CREATION MODAL -->
+  <div id="complaintCreateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">신규 민원 접수 등록</h3>
+        <button onclick="closeComplaintCreateModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleComplaintCreateSubmit(event)">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원 명칭 / 핵심 요지</label>
+          <input type="text" id="compTitleInput" class="form-input" style="width: 100%; padding: 10px;" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원인 성명</label>
+            <input type="text" id="compRequesterInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원인 연락처</label>
+            <input type="tel" id="compPhoneInput" class="form-input" style="width: 100%; padding: 10px;" placeholder="010-0000-0000" required>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">발생 장소 / 상세 주소</label>
+            <input type="text" id="compLocationInput" class="form-input" style="width: 100%; padding: 10px;" required>
+          </div>
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">소관 / 이첩 대상 부서</label>
+            <input type="text" id="compDeptInput" class="form-input" style="width: 100%; padding: 10px;" placeholder="예: 구청 도로교통과, 환경보전과" required>
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원 상세 내용 및 주민 요구사항</label>
+          <textarea id="compContentInput" class="form-textarea" rows="4" style="width: 100%; padding: 10px; line-height: 1.5;" required></textarea>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn-primary" style="flex: 1; height: 46px; font-size: 16px;">민원 정식 접수</button>
+          <button type="button" class="btn-outline" style="width: 90px; height: 46px;" onclick="closeComplaintCreateModal()">닫기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- USER PROFILE DOCUMENT & PHOTO MODAL -->
+  <div id="profileDocModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 540px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">개인 프로필 문서 및 사진 관리</h3>
+        <button onclick="closeProfileDocModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleProfileDocSubmit(event)">
+        <!-- Photo Section -->
+        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px; background: #F8FAFC; padding: 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <div id="profileDocPhotoPreview" style="width: 64px; height: 64px; border-radius: 50%; background: #1E3A8A; color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; overflow: hidden; border: 2px solid var(--border-color); flex-shrink: 0;">
+            의
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">프로필 증명사진 등록</label>
+            <input type="file" id="profileDocPhotoInput" accept="image/*" class="form-input" style="width: 100%; padding: 6px; font-size: 13px;" onchange="handleProfilePhotoChange(event)">
+          </div>
+        </div>
+
+        <!-- Name and Role info -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">이름</label>
+            <input type="text" id="profileDocName" class="form-input" style="width: 100%; padding: 8px; background: #F1F5F9;" readonly>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">직책 / 권한</label>
+            <input type="text" id="profileDocRole" class="form-input" style="width: 100%; padding: 8px; background: #F1F5F9;" readonly>
+          </div>
+        </div>
+
+        <!-- Document Attachment -->
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">프로필 / 이력서 / 의정활동 문서 등록 (PDF, HWP, DOCX)</label>
+          <input type="file" id="profileDocFileInput" accept=".pdf,.doc,.docx,.hwp,image/*" class="form-input" style="width: 100%; padding: 6px; font-size: 13px;">
+          <div id="profileDocFileStatus" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;"></div>
+        </div>
+
+        <!-- Bio / Notes -->
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">주요 이력 및 비고 메모</label>
+          <textarea id="profileDocBio" class="form-textarea" rows="4" style="width: 100%; padding: 8px; line-height: 1.5;" placeholder="의원실 내 주요 담당 업무, 연락처, 주요 경력 등을 기록하세요."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn-primary" style="flex: 1; height: 44px; font-size: 15px;">프로필 정보 저장</button>
+          <button type="button" class="btn-outline" style="width: 80px; height: 44px;" onclick="closeProfileDocModal()">닫기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- RESERVE BUDGET ADJUSTMENT MODAL -->
+  <div id="reserveBudgetModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: #D97706;">예비비 (선예약) 조정 및 결재</h3>
+        <button onclick="closeReserveBudgetModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <div>
+        <div style="background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: #92400E; font-weight: 700; margin-bottom: 4px;">현재 설정된 예비비(선예약)</div>
+          <div id="currentReserveBudgetDisplay" style="font-size: 20px; font-weight: 900; color: #D97706;">0원</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">조정 희망 예비비 금액 (원)</label>
+          <input type="number" id="newReserveBudgetInput" class="form-input" style="width: 100%; padding: 8px 12px; font-weight: 900; font-size: 16px; color: #D97706;" placeholder="0" required>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">예비비 조정 사유</label>
+          <textarea id="reserveBudgetReason" class="form-textarea" rows="3" style="width: 100%; padding: 8px;" placeholder="예비비 증액 또는 감액 사유를 기재하세요."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn-primary" style="flex: 1.2; height: 44px; font-size: 14px; background: #D97706; border-color: #D97706;" onclick="handleReserveBudgetApproval()">
+            예비비 조정 결재 상정
+          </button>
+          <button type="button" class="btn-outline" style="flex: 1; height: 44px; font-size: 13px; border-color: var(--primary-navy); color: var(--primary-navy); font-weight: 800;" onclick="handleReserveBudgetDirectSave()">
+            즉시 변경 (관리자 직권)
+          </button>
+          <button type="button" class="btn-outline" style="width: 70px; height: 44px;" onclick="closeReserveBudgetModal()">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOTAL BUDGET REVISION MODAL -->
+  <div id="totalBudgetModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 520px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">전체 총 예산 변경 결재 상정</h3>
+        <button onclick="closeTotalBudgetModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <div>
+        <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+          <div style="font-size: 13px; color: var(--text-muted); font-weight: 700; margin-bottom: 4px;">현재 의원실 전체 총 예산</div>
+          <div id="currentTotalBudgetDisplay" style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">0원</div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">변경 요청 총 예산 금액 (원)</label>
+          <input type="number" id="newTotalBudgetInput" class="form-input" style="width: 100%; padding: 8px 12px; font-weight: 900; font-size: 16px; color: var(--primary-navy);" placeholder="0" required>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">총 예산 변경 사유</label>
+          <textarea id="totalBudgetReason" class="form-textarea" rows="3" style="width: 100%; padding: 8px;" placeholder="예산 변경 사유 (예: 추경 확보, 후원금 수입 증가 등)를 입력하세요. 결재 완료 시 자동 반영됩니다." required></textarea>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-primary" style="flex: 1; height: 44px; font-size: 15px;" onclick="handleTotalBudgetApproval()">
+            총예산 변경 결재 상정
+          </button>
+          <button type="button" class="btn-outline" style="width: 80px; height: 44px;" onclick="closeTotalBudgetModal()">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- UNIVERSAL ITEM EDIT MODAL (VALID FOR ALL MODULES AND MENUS) -->
+  <div id="universalEditModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 600px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);" id="editModalHeaderTitle">상세 수정</h3>
+        <button onclick="closeUniversalEditModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleUniversalEditSubmit(event)">
+        <input type="hidden" id="editItemType">
+        <input type="hidden" id="editItemId">
+        
+        <div id="editModalFieldsContainer" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px;">
+          <!-- Dynamically generated input fields based on item type -->
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button type="submit" class="btn-primary" style="flex: 1; height: 48px; font-size: 16px;">수정 내용 최종 저장</button>
+          <button type="button" class="btn-outline" style="width: 140px; height: 48px; font-size: 15px; border-color: #DC2626; color: #DC2626;" onclick="handleUniversalDelete()">데이터 삭제</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Korean Choseong Engine -->
+  <script src="js/choseong.js"></script>
+  <!-- Core Logic Engine -->
+  <script src="js/app.js?v=21"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

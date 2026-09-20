@@ -1,0 +1,7 @@
+node_modules/
+.npm-cache/
+temp/
+.vercel/
+*.log
+.DS_Store
+Thumbs.db
