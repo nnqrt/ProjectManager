@@ -1157,6 +1157,10 @@ let appState = {
   isSidebarCollapsed: false,
   isLoggedIn: localStorage.getItem('politic_sync_logged_in') === 'true',
   hideCompletedSimpleTasks: true,
+  branding: JSON.parse(localStorage.getItem('politic_sync_branding')) || {
+    emblem: '',
+    subtitle: '인천시당'
+  },
   accountingSettings: JSON.parse(localStorage.getItem('politic_sync_accounting_settings')) || {
     totalBudget: 0,
     reserveBudget: 0
@@ -1445,6 +1449,7 @@ function saveState() {
   localStorage.setItem('politic_sync_trash', JSON.stringify(appState.trashBin || []));
   localStorage.setItem('politic_sync_accounting_settings', JSON.stringify(appState.accountingSettings || { totalBudget: 0, reserveBudget: 0 }));
   localStorage.setItem('politic_sync_accounting_ledger', JSON.stringify(appState.accountingLedger || []));
+  localStorage.setItem('politic_sync_branding', JSON.stringify(appState.branding || { emblem: '', subtitle: '인천시당' }));
 }
 
 function resetSystemData() {
@@ -5003,11 +5008,11 @@ function renderAdminConfigTab(area) {
         <div style="background: #F8FAFC; border: 1px solid var(--border-color); padding: 16px; border-radius: 8px;">
           <h4 style="font-size: 15px; font-weight: 900; color: var(--primary-navy); margin-bottom: 8px;">전사 데이터 백업 및 복원</h4>
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-            의원실 전체 안건, 10대 사무, 회원 DB를 JSON 파일로 다운로드하거나 복원합니다.
+            의원실 전체 안건, 10대 사무 모듈, 회원 DB, 회계장부(총예산/원장), 당 엠블럼 등 입력된 모든 전사 데이터를 안전하게 백업 및 복원합니다.
           </p>
           <div style="display: flex; gap: 8px;">
-            <button class="btn-outline" style="flex: 1; height: 44px; font-size: 13px; background: #FFF;" onclick="adminExportJSON()">JSON 데이터 다운로드</button>
-            <button class="btn-outline" style="flex: 1; height: 44px; font-size: 13px; background: #FFF;" onclick="adminImportJSONTrigger()">JSON 복원 가져오기</button>
+            <button class="btn-outline" style="flex: 1; height: 44px; font-size: 13px; background: #FFF;" onclick="adminExportJSON()">전사 데이터 백업 다운로드</button>
+            <button class="btn-outline" style="flex: 1; height: 44px; font-size: 13px; background: #FFF;" onclick="adminImportJSONTrigger()">백업 데이터 복원 가져오기</button>
             <input type="file" id="jsonImportInput" accept=".json" style="display: none;" onchange="adminImportJSONHandler(event)">
           </div>
         </div>
@@ -5026,27 +5031,32 @@ function renderAdminConfigTab(area) {
 
 function adminExportJSON() {
   const exportData = {
+    backupVersion: "2.1",
+    systemName: "자유와혁신 Pro Enterprise",
     exportDate: new Date().toISOString(),
-    users: appState.users,
-    tasks: appState.tasks,
-    crmList: appState.crmList,
-    schedules: appState.schedules,
-    complaints: appState.complaints,
-    simpleTasks: appState.simpleTasks,
-    eventsList: appState.eventsList,
-    docsList: appState.docsList,
-    pressList: appState.pressList,
-    msgList: appState.msgList,
-    trashBin: appState.trashBin || []
+    users: appState.users || [],
+    tasks: appState.tasks || [],
+    crmList: appState.crmList || [],
+    schedules: appState.schedules || [],
+    complaints: appState.complaints || [],
+    simpleTasks: appState.simpleTasks || [],
+    eventsList: appState.eventsList || [],
+    docsList: appState.docsList || [],
+    pressList: appState.pressList || [],
+    msgList: appState.msgList || [],
+    trashBin: appState.trashBin || [],
+    accountingSettings: appState.accountingSettings || { totalBudget: 0, reserveBudget: 0 },
+    accountingLedger: appState.accountingLedger || [],
+    branding: appState.branding || { emblem: '', subtitle: '인천시당' }
   };
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
   const downloadAnchor = document.createElement('a');
   downloadAnchor.setAttribute("href", dataStr);
-  downloadAnchor.setAttribute("download", `자유와혁신_Pro_System_Backup_${new Date().toISOString().slice(0,10)}.json`);
+  downloadAnchor.setAttribute("download", `자유와혁신_전사통합백업_${new Date().toISOString().slice(0,10)}.json`);
   document.body.appendChild(downloadAnchor);
   downloadAnchor.click();
   downloadAnchor.remove();
-  alert("백그라운드 백업 완료 - 전사 데이터가 JSON 백업 파일로 다운로드되었습니다.");
+  alert("전사 데이터 백업 완료 - 회원 DB, 전자결재 안건, 10대 사무 모듈, 회계장부(총예산/예비비/원장), 당 엠블럼 등 모든 데이터가 안전하게 JSON 파일로 백업되었습니다.");
 }
 
 function adminImportJSONTrigger() {
@@ -5058,30 +5068,62 @@ function adminImportJSONHandler(event) {
   const file = event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     try {
       const data = JSON.parse(e.target.result);
-      if (data.users && data.tasks) {
-        if (!confirm("백업 파일 데이터를 복원하시겠습니까? 현재 데이터는 대체됩니다.")) return;
-        appState.users = data.users;
-        appState.tasks = data.tasks;
-        if (data.crmList) appState.crmList = data.crmList;
-        if (data.schedules) appState.schedules = data.schedules;
-        if (data.complaints) appState.complaints = data.complaints;
-        if (data.simpleTasks) appState.simpleTasks = data.simpleTasks;
-        if (data.eventsList) appState.eventsList = data.eventsList;
-        if (data.docsList) appState.docsList = data.docsList;
-        if (data.pressList) appState.pressList = data.pressList;
-        if (data.msgList) appState.msgList = data.msgList;
-        if (data.trashBin) appState.trashBin = data.trashBin;
+      if (data && (data.users || data.tasks)) {
+        if (!confirm("백업 파일 데이터를 복원하시겠습니까? 현재 시스템에 등록된 모든 데이터가 백업 파일의 내용으로 완전히 교체/복원됩니다.")) return;
+        
+        if (Array.isArray(data.users)) appState.users = data.users;
+        if (Array.isArray(data.tasks)) appState.tasks = data.tasks;
+        if (Array.isArray(data.crmList)) appState.crmList = data.crmList;
+        if (Array.isArray(data.schedules)) appState.schedules = data.schedules;
+        if (Array.isArray(data.complaints)) appState.complaints = data.complaints;
+        if (Array.isArray(data.simpleTasks)) appState.simpleTasks = data.simpleTasks;
+        if (Array.isArray(data.eventsList)) appState.eventsList = data.eventsList;
+        if (Array.isArray(data.docsList)) appState.docsList = data.docsList;
+        if (Array.isArray(data.pressList)) appState.pressList = data.pressList;
+        if (Array.isArray(data.msgList)) appState.msgList = data.msgList;
+        if (Array.isArray(data.trashBin)) appState.trashBin = data.trashBin;
+        if (data.accountingSettings) appState.accountingSettings = data.accountingSettings;
+        if (Array.isArray(data.accountingLedger)) appState.accountingLedger = data.accountingLedger;
+        if (data.branding) appState.branding = data.branding;
+
+        // If Supabase is connected, sync restored users to profiles
+        if (supabaseClient && Array.isArray(data.users)) {
+          try {
+            for (const u of data.users) {
+              await supabaseClient.from('profiles').upsert({
+                id: u.id,
+                name: u.name,
+                team: u.team,
+                role_title: u.roleTitle,
+                clearance: u.clearance,
+                phone: u.phone,
+                email: u.email,
+                avatar: u.avatar,
+                is_admin: u.isAdmin || u.clearance === '1급',
+                status: u.status || 'APPROVED'
+              });
+            }
+          } catch(err) {
+            console.warn("Supabase profiles sync during import:", err);
+          }
+        }
+
         saveState();
-        alert("복원 완료 - 백업 파일의 데이터가 시스템에 성공적으로 복원되었습니다.");
-        renderAdminView();
+        populateFormChecklists();
+        renderApp();
+        if (appState.activeTab === 'adminView') {
+          renderAdminView();
+        }
+        alert("전사 데이터 복원 완료 - 회원, 결재 안건, 10대 사무, 회계장부(예산/원장), 엠블럼 등 모든 데이터가 시스템에 완벽히 복원되었습니다.");
       } else {
         alert("유효하지 않은 백업 JSON 파일 양식입니다.");
       }
     } catch (err) {
-      alert("JSON 파싱 오류: 파일 내용을 확인하세요.");
+      console.error(err);
+      alert("JSON 파싱 오류: 올바른 JSON 백업 파일인지 확인해주세요.");
     }
   };
   reader.readAsText(file);
