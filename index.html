@@ -129,14 +129,18 @@
 
       <!-- User Profile Box -->
       <div class="sidebar-user-box">
-        <div class="user-profile-card">
-          <div class="user-avatar" id="sidebarUserAvatar">최</div>
-          <div>
-            <div class="user-info-name" id="sidebarUserName">최고관리자</div>
-            <div class="user-info-role" id="sidebarUserRole">의원실 (총괄 최고관리자)</div>
+        <div class="user-profile-card" onclick="openProfileDocModal()" style="cursor: pointer;" title="클릭하여 프로필 사진 및 정보 관리">
+          <div class="user-avatar" id="sidebarUserAvatar">류</div>
+          <div style="min-width: 0;">
+            <div class="user-info-name" id="sidebarUserName" style="text-decoration: underline; text-underline-offset: 3px; cursor: pointer;" title="클릭하여 프로필/사진 변경">류민우</div>
+            <div class="user-info-role" id="sidebarUserRole">의원실 (당협추진위원장)</div>
           </div>
         </div>
         <div style="display: flex; gap: 6px; width: 100%; margin-top: 6px;">
+          <button type="button" class="btn-outline" style="flex: 1; font-size: 11px; padding: 6px 2px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileDocModal()" title="프로필 및 사진 변경">
+            <span class="sidebar-link-text">프로필/사진</span>
+            <span style="display:none;" class="sidebar-collapsed-icon">MY</span>
+          </button>
           <button type="button" class="btn-outline" style="flex: 1; font-size: 11px; padding: 6px 2px; color: #E2E8F0; border-color: rgba(255,255,255,0.25);" onclick="openProfileModal()" title="개인 비밀번호 변경">
             <span class="sidebar-link-text">비번 변경</span>
             <span style="display:none;" class="sidebar-collapsed-icon">PW</span>
@@ -195,7 +199,7 @@
 
         <div style="display: flex; align-items: center; gap: 8px;">
           <div class="top-header-user-status" id="topHeaderUserStatus">
-            현재 접속: 최고관리자 (의원실)
+            현재 접속: 류민우 (의원실)
           </div>
           <button class="btn-outline" id="logoutHeaderBtn" style="border-color: #475569; color: #475569; font-weight: 800;" onclick="handleLogout()">로그아웃</button>
         </div>
@@ -864,6 +868,66 @@
     </div>
   </div>
 
+  <!-- PROFILE DETAIL & PHOTO MODAL -->
+  <div id="profileDocModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">
+        <h3 style="font-size: 20px; font-weight: 900; color: var(--primary-navy);">내 프로필 정보 및 사진 등록</h3>
+        <button onclick="closeProfileDocModal()" style="border: none; background: none; font-size: 22px; cursor: pointer;">✕</button>
+      </div>
+      <form onsubmit="handleProfileDocSubmit(event)">
+        <!-- Photo Upload Box -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 18px; background: #F8FAFC; padding: 18px; border-radius: 8px; border: 1px solid var(--border-color);">
+          <div id="profileDocPhotoPreview" style="width: 88px; height: 88px; border-radius: 50%; background: var(--primary-navy); color: #FFF; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 900; overflow: hidden; border: 3px solid #FFF; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+            류
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <label class="btn-outline" style="font-size: 13px; padding: 6px 14px; cursor: pointer; background: #FFF;">
+              사진 선택 / 등록
+              <input type="file" id="profileDocPhotoInput" accept="image/*" style="display: none;" onchange="handleProfilePhotoChange(event)">
+            </label>
+            <button type="button" class="btn-outline" style="font-size: 13px; padding: 6px 14px; color: #DC2626; border-color: #DC2626; background: #FFF;" onclick="removeProfilePhoto()">
+              사진 초기화
+            </button>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted);">정사각형 이미지를 권장하며, 등록 즉시 사이드바 및 결재선에 반영됩니다.</div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">이름</label>
+            <input type="text" id="profileDocName" class="form-input" style="width: 100%; padding: 8px 10px; background: #F1F5F9;" readonly>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">직책 / 결재 등급</label>
+            <input type="text" id="profileDocRole" class="form-input" style="width: 100%; padding: 8px 10px; background: #F1F5F9;" readonly>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">이메일 (접속ID)</label>
+            <input type="text" id="profileDocEmail" class="form-input" style="width: 100%; padding: 8px 10px; background: #F1F5F9;" readonly>
+          </div>
+          <div>
+            <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">연락처 (휴대폰)</label>
+            <input type="text" id="profileDocPhone" class="form-input" style="width: 100%; padding: 8px 10px;" placeholder="010-0000-0000" required>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 4px;">소개 / 업무 메모</label>
+          <textarea id="profileDocBio" class="form-textarea" rows="2" style="width: 100%; padding: 8px 10px;" placeholder="소개글 또는 당무 관련 메모를 입력할 수 있습니다."></textarea>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn-outline" style="flex: 1; height: 44px; font-size: 14px;" onclick="closeProfileDocModal()">취소</button>
+          <button type="submit" class="btn-primary" style="flex: 2; height: 44px; font-size: 15px; background: var(--primary-navy);">프로필 및 사진 저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- PROFILE & PASSWORD MODAL -->
   <div id="profileModal" class="modal-overlay hidden">
     <div class="modal-content" style="max-width: 400px;">
@@ -1177,7 +1241,7 @@
   <!-- Korean Choseong Engine -->
   <script src="js/choseong.js"></script>
   <!-- Core Logic Engine -->
-  <script src="js/app.js?v=23"></script>
+  <script src="js/app.js?v=25"></script>
   <script>
     lucide.createIcons();
   </script>

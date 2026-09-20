@@ -233,43 +233,48 @@ window.editSidebarSubtitle = function() {
   }
 };
 
-// --- PROFILE DOCUMENT & PHOTO MODAL HANDLERS ---
+// --- PROFILE & PHOTO MODAL HANDLERS ---
 let tempProfilePhotoDataUrl = null;
 
 window.openProfileDocModal = function() {
   if (!appState.currentUser) return;
   const u = appState.currentUser;
 
-  document.getElementById('profileDocName').value = u.name || '';
-  document.getElementById('profileDocRole').value = getUserRoleClean(u) + (u.clearance ? ' (' + u.clearance + ')' : '');
-  document.getElementById('profileDocBio').value = u.bio || '';
+  const nameEl = document.getElementById('profileDocName');
+  if (nameEl) nameEl.value = u.name || '';
+
+  const roleEl = document.getElementById('profileDocRole');
+  if (roleEl) roleEl.value = (u.roleTitle || getUserRoleClean(u)) + (u.clearance ? ' (' + u.clearance + ')' : '');
+
+  const emailEl = document.getElementById('profileDocEmail');
+  if (emailEl) emailEl.value = u.email || '';
+
+  const phoneEl = document.getElementById('profileDocPhone');
+  if (phoneEl) phoneEl.value = u.phone || '';
+
+  const bioEl = document.getElementById('profileDocBio');
+  if (bioEl) bioEl.value = u.bio || '';
 
   const preview = document.getElementById('profileDocPhotoPreview');
   if (preview) {
     if (u.photoUrl) {
       preview.innerHTML = '<img src="' + u.photoUrl + '" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">';
     } else {
-      preview.innerHTML = u.name ? u.name.charAt(0) : '의';
-    }
-  }
-
-  const docStatus = document.getElementById('profileDocFileStatus');
-  if (docStatus) {
-    if (u.profileDocName) {
-      docStatus.innerHTML = '현재 보관 문서: <strong>' + u.profileDocName + '</strong> (' + (u.profileDocDate || '') + ')';
-    } else {
-      docStatus.textContent = '현재 등록된 첨부 문서가 없습니다.';
+      preview.innerHTML = u.avatar || (u.name ? u.name.charAt(0) : '류');
     }
   }
 
   tempProfilePhotoDataUrl = null;
-  document.getElementById('profileDocPhotoInput').value = '';
-  document.getElementById('profileDocFileInput').value = '';
-  document.getElementById('profileDocModal').classList.remove('hidden');
+  const photoInput = document.getElementById('profileDocPhotoInput');
+  if (photoInput) photoInput.value = '';
+
+  const modal = document.getElementById('profileDocModal');
+  if (modal) modal.classList.remove('hidden');
 };
 
 window.closeProfileDocModal = function() {
-  document.getElementById('profileDocModal').classList.add('hidden');
+  const modal = document.getElementById('profileDocModal');
+  if (modal) modal.classList.add('hidden');
 };
 
 window.handleProfilePhotoChange = function(event) {
@@ -278,43 +283,89 @@ window.handleProfilePhotoChange = function(event) {
 
   const reader = new FileReader();
   reader.onload = function(e) {
-    tempProfilePhotoDataUrl = e.target.result;
-    const preview = document.getElementById('profileDocPhotoPreview');
-    if (preview) {
-      preview.innerHTML = '<img src="' + tempProfilePhotoDataUrl + '" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">';
-    }
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxDim = 300;
+      let w = img.width;
+      let h = img.height;
+      if (w > h) {
+        if (w > maxDim) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        }
+      } else {
+        if (h > maxDim) {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      tempProfilePhotoDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+      const preview = document.getElementById('profileDocPhotoPreview');
+      if (preview) {
+        preview.innerHTML = '<img src="' + tempProfilePhotoDataUrl + '" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">';
+      }
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 };
 
-window.handleProfileDocSubmit = function(event) {
+window.removeProfilePhoto = function() {
+  tempProfilePhotoDataUrl = 'REMOVE';
+  const preview = document.getElementById('profileDocPhotoPreview');
+  if (preview) {
+    const u = appState.currentUser;
+    preview.innerHTML = (u && u.avatar) || (u && u.name ? u.name.charAt(0) : '류');
+  }
+};
+
+window.handleProfileDocSubmit = async function(event) {
   event.preventDefault();
   if (!appState.currentUser) return;
 
   const u = appState.currentUser;
-  u.bio = document.getElementById('profileDocBio').value.trim();
+  const phoneVal = document.getElementById('profileDocPhone').value.trim();
+  const bioVal = document.getElementById('profileDocBio').value.trim();
 
-  if (tempProfilePhotoDataUrl) {
+  u.phone = phoneVal;
+  u.bio = bioVal;
+
+  if (tempProfilePhotoDataUrl === 'REMOVE') {
+    u.photoUrl = null;
+  } else if (tempProfilePhotoDataUrl) {
     u.photoUrl = tempProfilePhotoDataUrl;
   }
 
-  const fileInput = document.getElementById('profileDocFileInput');
-  if (fileInput.files && fileInput.files[0]) {
-    const file = fileInput.files[0];
-    u.profileDocName = file.name;
-    u.profileDocDate = new Date().toLocaleDateString();
-  }
-
-  // Sync to users array
-  const userIdx = (appState.users || []).findIndex(user => user.id === u.id);
+  // Update in appState.users array
+  const userIdx = (appState.users || []).findIndex(user => user.id === u.id || user.email === u.email);
   if (userIdx !== -1) {
-    appState.users[userIdx] = { ...u };
+    appState.users[userIdx] = { ...appState.users[userIdx], ...u };
+  } else {
+    appState.users.push({ ...u });
   }
 
   saveState();
-  closeProfileDocModal();
   renderApp();
-  alert("개인 프로필 정보 및 문서가 안전하게 저장되었습니다.");
+
+  // Cloud sync to Supabase
+  if (supabaseClient && u.id) {
+    try {
+      await supabaseClient.from('profiles').update({
+        phone: u.phone
+      }).eq('id', u.id);
+    } catch (err) {
+      console.warn("Supabase profile update warning:", err);
+    }
+  }
+
+  closeProfileDocModal();
+  alert("개인 프로필 정보 및 사진이 안전하게 저장되었습니다.");
 };
 
 
@@ -967,9 +1018,9 @@ function formatUserDisplay(u) {
    ========================================================================== */
 
 // --- PRODUCTION CLOUD FRESH INITIALIZATION ---
-if (localStorage.getItem('prod_cloud_deployed_v2') !== 'true') {
+if (localStorage.getItem('prod_cloud_deployed_v4') !== 'true') {
   localStorage.clear();
-  localStorage.setItem('prod_cloud_deployed_v2', 'true');
+  localStorage.setItem('prod_cloud_deployed_v4', 'true');
 }
 
 // --- SUPABASE CONFIGURATION ---
@@ -984,54 +1035,77 @@ if (typeof window.supabase !== 'undefined' && SUPABASE_URL !== 'YOUR_SUPABASE_UR
   console.warn("Supabase is not configured yet. Using local fallback for testing.");
 }
 
-// --- OFFICIAL PRODUCTION USERS DATABASE ---
+// --- OFFICIAL PRODUCTION USERS DATABASE (ZERO DUMMY USERS - ONLY REAL 1급 ADMIN) ---
 const DEFAULT_USERS = [
   {
-    id: 'usr-001',
-    name: '최고관리자',
+    id: '85b55d3d-7c43-4060-b117-77fe0b9dea12',
+    name: '류민우',
     team: '의원실',
-    roleTitle: '의원실 (총괄 최고관리자)',
+    roleTitle: '의원실 (당협추진위원장)',
     clearance: '1급',
-    phone: '010-0000-0000',
+    phone: '010-4956-4169',
     email: 'nnqrt1983@gmail.com',
-    avatar: '최',
+    avatar: '류',
     isAdmin: true,
-    status: 'APPROVED'
-  },
-  {
-    id: 'usr-002',
-    name: '김보좌',
-    team: '정무기획팀',
-    roleTitle: '정무기획팀 (수석보좌관)',
-    clearance: '2급',
-    phone: '010-0000-0002',
-    email: 'aide1@assembly.go.kr',
-    avatar: '김',
-    status: 'APPROVED'
-  },
-  {
-    id: 'usr-003',
-    name: '이비서',
-    team: '수행지원팀',
-    roleTitle: '수행지원팀 (선임비서관)',
-    clearance: '3급',
-    phone: '010-0000-0003',
-    email: 'secretary@assembly.go.kr',
-    avatar: '이',
-    status: 'APPROVED'
-  },
-  {
-    id: 'usr-004',
-    name: '박회계',
-    team: '회계재정팀',
-    roleTitle: '회계재정팀 (회계관리)',
-    clearance: '회계관리',
-    phone: '010-0000-0004',
-    email: 'finance@assembly.go.kr',
-    avatar: '박',
     status: 'APPROVED'
   }
 ];
+
+// --- PERMISSION CHECK HELPERS (STRICT 1급 ADMIN) ---
+function isUserSuperAdmin(user) {
+  if (!user) return false;
+  return user.clearance === '1급' || user.isAdmin === true || user.email === 'nnqrt1983@gmail.com';
+}
+
+function isUserFinanceAdmin(user) {
+  if (!user) return false;
+  return isUserSuperAdmin(user) || user.clearance === '회계관리';
+}
+
+// --- SYNC SUPABASE REAL PROFILES ---
+async function fetchSupabaseProfiles() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.from('profiles').select('*');
+    if (!error && data && data.length > 0) {
+      appState.users = data.map(p => {
+        const existing = (appState.users || []).find(u => u.id === p.id || u.email === p.email);
+        return {
+          id: p.id,
+          name: p.name,
+          team: p.team || '의원실',
+          roleTitle: p.role_title || '의원실',
+          clearance: p.clearance || '1급',
+          phone: p.phone || (existing ? existing.phone : ''),
+          email: p.email,
+          avatar: p.avatar || (p.name ? p.name.charAt(0) : '류'),
+          isAdmin: p.is_admin === true || p.clearance === '1급' || p.email === 'nnqrt1983@gmail.com',
+          status: p.status || 'APPROVED',
+          photoUrl: p.photo_url || (existing ? existing.photoUrl : null),
+          bio: p.bio || (existing ? existing.bio : '')
+        };
+      });
+
+      if (appState.currentUser) {
+        const found = appState.users.find(u => u.email === appState.currentUser.email || u.id === appState.currentUser.id);
+        if (found) {
+          appState.currentUser = { ...appState.currentUser, ...found };
+        } else {
+          appState.currentUser = appState.users.find(u => u.email === 'nnqrt1983@gmail.com') || appState.users[0];
+        }
+      } else {
+        appState.currentUser = appState.users.find(u => u.email === 'nnqrt1983@gmail.com') || appState.users[0];
+      }
+
+      saveState();
+      populateFormChecklists();
+      renderApp();
+    }
+  } catch (e) {
+    console.warn("Supabase profiles load failed:", e);
+  }
+}
+
 const DEFAULT_TASKS = [];
 const DEFAULT_CRM = [];
 const DEFAULT_SCHEDULES = [];
@@ -1075,13 +1149,14 @@ let appState = {
 };
 
 // --- INITIALIZATION ---
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   migrateTaskIds();
   updateLoginScreenUI();
   renderApp();
   populateFormChecklists();
   updateTestModeUI();
   initGlobalESCListener();
+  await fetchSupabaseProfiles();
 });
 
 function updateLoginScreenUI() {
@@ -1133,7 +1208,7 @@ async function handleLoginSubmit(e) {
     }
     
     if (profile.status === 'PENDING') {
-      alert("현재 가입 승인 대기 상태입니다. 관리자의 최종 승인 전까지 접근이 제한됩니다.");
+      alert("현재 가입 승인 대기 상태입니다. 최고관리자(1급)의 최종 승인 전까지 접근이 제한됩니다.");
       await supabaseClient.auth.signOut();
       return;
     }
@@ -1147,21 +1222,23 @@ async function handleLoginSubmit(e) {
       clearance: profile.clearance,
       phone: profile.phone,
       email: profile.email,
-      avatar: profile.avatar,
-      isAdmin: profile.is_admin,
+      avatar: profile.avatar || (profile.name ? profile.name.charAt(0) : '류'),
+      isAdmin: profile.is_admin === true || profile.clearance === '1급' || profile.email === 'nnqrt1983@gmail.com',
       status: profile.status
     };
+
+    await fetchSupabaseProfiles();
   } else {
     const inputClean = emailVal.toLowerCase();
     let matchedUser = appState.users.find(u => 
-      u.email.toLowerCase() === inputClean ||
-      (u.id === 'usr-001' && (inputClean === 'admin' || inputClean === 'mp' || inputClean === 'nnqrt' || inputClean === 'nnqrt1983@gmail.com'))
+      (u.email && u.email.toLowerCase() === inputClean) ||
+      (inputClean === 'admin' || inputClean === 'nnqrt' || inputClean === 'nnqrt1983@gmail.com')
     );
     if (!matchedUser) {
       alert("등록된 사용자 정보를 찾을 수 없습니다. 먼저 회원가입을 진행해주세요.");
       return;
     }
-    if (matchedUser.status === 'PENDING_APPROVAL') {
+    if (matchedUser.status === 'PENDING' || matchedUser.status === 'PENDING_APPROVAL') {
       alert("현재 가입 승인 대기 상태입니다.");
       return;
     }
@@ -1290,7 +1367,7 @@ function initGlobalESCListener() {
 }
 
 function closeAllModals() {
-  const modals = ['taskDetailModal', 'moduleDetailModal', 'approverSelectModal', 'userAuthModal', 'viewerAuditModal', 'scheduleCreateModal', 'simpleTaskCreateModal', 'eventCreateModal', 'vaultCreateModal', 'pressCreateModal', 'msgCreateModal', 'universalEditModal'];
+  const modals = ['profileDocModal', 'profileModal', 'taskDetailModal', 'moduleDetailModal', 'approverSelectModal', 'userAuthModal', 'viewerAuditModal', 'scheduleCreateModal', 'simpleTaskCreateModal', 'eventCreateModal', 'vaultCreateModal', 'pressCreateModal', 'msgCreateModal', 'universalEditModal'];
   modals.forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
@@ -1317,7 +1394,7 @@ function resetSystemData() {
     alert("실제 운영 모드에서는 시스템 데이터 초기화 기능이 전면 차단됩니다.");
     return;
   }
-  if (!confirm("모든 데이터를 초기 기본 샘플 상태로 복구하시겠습니까?")) return;
+  if (!confirm("모든 데이터를 초기 기본 상태로 복구하시겠습니까?")) return;
   localStorage.clear();
   appState.users = DEFAULT_USERS;
   appState.currentUser = DEFAULT_USERS[0];
@@ -1332,8 +1409,8 @@ function resetSystemData() {
   appState.msgList = DEFAULT_MSGS;
   appState.trashBin = [];
   appState.seniorTaskIndex = 0;
-  appState.selectedMidReviewers = ['usr-002'];
-  appState.selectedCoopStaff = ['usr-005', 'usr-006'];
+  appState.selectedMidReviewers = [];
+  appState.selectedCoopStaff = [];
   appState.currentAttachedPhotos = [];
   saveState();
   populateFormChecklists();
@@ -1548,7 +1625,7 @@ function populateFormChecklists() {
     approvedUsers.map(u => `<option value="${u.id}">${formatUserDisplay(u)}</option>`).join('');
 
   finalSelect.innerHTML = approvedUsers.map(u => `
-    <option value="${u.id}" ${u.id === 'usr-001' ? 'selected' : ''}>${formatUserDisplay(u)}</option>
+    <option value="${u.id}" ${isUserSuperAdmin(u) ? 'selected' : ''}>${formatUserDisplay(u)}</option>
   `).join('');
 
   renderSelectedApproverPills();
@@ -1718,7 +1795,7 @@ function handlePhotoPreview(event) {
 // --- TAB SWITCHER ---
 function switchTab(tabName) {
   if (tabName === 'adminView') {
-    const isAdmin = appState.currentUser && (appState.currentUser.id === 'usr-000' || appState.currentUser.isAdmin === true || (appState.currentUser.email && appState.currentUser.email.includes('admin')) || appState.currentUser.clearance === '1급' || appState.currentUser.clearance === '회계관리');
+    const isAdmin = isUserFinanceAdmin(appState.currentUser);
     if (!isAdmin) {
       alert("접근 차단 - 1급 관리자 전용 통제 메뉴입니다. 일반 사용자에게는 메뉴가 표시되지 않으며 접근할 수 없습니다.");
       return;
@@ -1798,7 +1875,7 @@ function renderApp() {
   document.getElementById('sidebarUserRole').textContent = getUserRoleClean(appState.currentUser);
   document.getElementById('topHeaderUserStatus').textContent = formatUserDisplay(appState.currentUser);
 
-  const isSuperAdmin = appState.currentUser && (appState.currentUser.id === 'usr-000' || appState.currentUser.isAdmin === true || (appState.currentUser.email && appState.currentUser.email.includes('admin')) || appState.currentUser.clearance === '1급');
+  const isSuperAdmin = isUserSuperAdmin(appState.currentUser);
   const isFinanceUser = appState.currentUser && appState.currentUser.clearance === '회계관리';
   const isAdmin = isSuperAdmin || isFinanceUser;
   const adminBtn = document.getElementById('sidebarAdminBtn');
@@ -4350,18 +4427,17 @@ function renderAdminView() {
   const area = document.getElementById('adminContentArea');
   if (!area) return;
 
-  const isSuperAdmin = appState.currentUser && (appState.currentUser.id === 'usr-000' || appState.currentUser.isAdmin === true || (appState.currentUser.email && appState.currentUser.email.includes('admin')) || appState.currentUser.clearance === '1급');
+  const isSuperAdmin = isUserSuperAdmin(appState.currentUser);
   const isFinanceUser = appState.currentUser && appState.currentUser.clearance === '회계관리';
   const isAdmin = isSuperAdmin || isFinanceUser;
   if (!isAdmin) {
     area.innerHTML = `
       <div class="card" style="border: 2px solid #DC2626; background: #FEF2F2; padding: 24px; text-align: center;">
-        <div style="font-size: 20px; font-weight: 900; color: #991B1B; margin-bottom: 12px;">접근 권한 제한 안내: 1급 결재권자 및 회계관리 전용 메뉴입니다.</div>
+        <div style="font-size: 20px; font-weight: 900; color: #991B1B; margin-bottom: 12px;">접근 권한 제한 안내: 1급 최고관리자 전용 메뉴입니다.</div>
         <p style="font-size: 15px; color: #7F1D1D; margin-bottom: 18px;">
-          본 통제 센터는 전사 인사/결재 통제 및 회계 경비 트래킹 전용 영역입니다.<br>
-          현재 접속 중인 <strong>${appState.currentUser.name} (${appState.currentUser.roleTitle})</strong> 님은 [${appState.currentUser.clearance || '일반'}] 권한으로 제한됩니다.
+          본 통제 센터는 전사 인사/결재 통제 및 시스템 환경 설정 전용 영역입니다.<br>
+          현재 접속 중인 <strong>${appState.currentUser ? appState.currentUser.name : ''} (${appState.currentUser ? appState.currentUser.roleTitle : ''})</strong> 님은 [${appState.currentUser ? appState.currentUser.clearance : '일반'}] 권한으로 관리자 메뉴 접근이 제한됩니다.
         </p>
-        <button class="btn-primary" style="background: #991B1B; width: auto; padding: 0 24px;" onclick="quickSetLogin('admin')">총괄사무국장 admin (1급) 계정으로 전환</button>
       </div>
     `;
     return;
@@ -4392,8 +4468,8 @@ function renderAdminView() {
 }
 
 function renderAdminUsersTab(area) {
-  const pendingUsers = appState.users.filter(u => u.status === 'PENDING_APPROVAL');
-  const approvedUsers = appState.users.filter(u => u.status !== 'PENDING_APPROVAL');
+  const pendingUsers = (appState.users || []).filter(u => u.status === 'PENDING' || u.status === 'PENDING_APPROVAL');
+  const approvedUsers = (appState.users || []).filter(u => u.status !== 'PENDING' && u.status !== 'PENDING_APPROVAL');
 
   let pendingHTML = '';
   if (pendingUsers.length > 0) {
@@ -4430,13 +4506,15 @@ function renderAdminUsersTab(area) {
         ${approvedUsers.map(u => `
           <div style="background: #FFF; border: 1px solid var(--border-color); padding: 12px 14px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div class="user-avatar" style="width: 42px; height: 42px; font-size: 16px; background: ${u.isAdmin ? '#991B1B' : ''};">${u.avatar}</div>
+              <div class="user-avatar" style="width: 42px; height: 42px; font-size: 16px; background: ${u.isAdmin ? '#991B1B' : ''}; overflow: hidden;">
+                ${u.photoUrl ? `<img src="${u.photoUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : (u.avatar || (u.name ? u.name.charAt(0) : '류'))}
+              </div>
               <div>
                 <div style="font-size: 16px; font-weight: 900; color: var(--text-dark);">
                   ${u.name} <span style="font-size: 13px; color: ${u.clearance === '1급' ? '#991B1B' : 'var(--primary-navy)'}; font-weight: 800;">${u.clearance || '2급'}</span>
                   ${u.isAdmin ? '<span style="background:#991B1B; color:#FFF; font-size:11px; padding:2px 6px; border-radius:4px; margin-left:4px;">최고총괄</span>' : ''}
                 </div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 700;">${u.roleTitle} | 연락처: ${u.phone} | 접속ID: ${u.email}</div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 700;">${u.roleTitle} | 연락처: ${u.phone || '-'} | 접속ID: ${u.email}</div>
               </div>
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
@@ -4455,23 +4533,74 @@ function renderAdminUsersTab(area) {
   `;
 }
 
-function adminChangeUserClearance(userId, newCls) {
+window.approveUserRegistration = async function(userId) {
+  const user = appState.users.find(u => String(u.id) === String(userId));
+  if (!user) return;
+  user.status = 'APPROVED';
+  saveState();
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from('profiles').update({ status: 'APPROVED' }).eq('id', userId);
+    } catch (e) {
+      console.warn("Supabase approve error:", e);
+    }
+  }
+  alert(`정식 승인 완료: ${user.name} 님의 가입 신청이 정식 승인되었습니다.`);
+  renderAdminView();
+};
+
+window.rejectUserRegistration = async function(userId) {
+  if (!confirm("해당 사용자의 가입 신청을 반려하시겠습니까?")) return;
+  const user = appState.users.find(u => String(u.id) === String(userId));
+  appState.users = appState.users.filter(u => String(u.id) !== String(userId));
+  saveState();
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from('profiles').delete().eq('id', userId);
+    } catch (e) {
+      console.warn("Supabase reject error:", e);
+    }
+  }
+  alert("가입 반려 완료: 해당 사용자의 가입 신청이 반려되었습니다.");
+  renderAdminView();
+};
+
+window.adminChangeUserClearance = async function(userId, newCls) {
   appState.users = appState.users.map(u => {
     if (String(u.id) === String(userId)) return { ...u, clearance: newCls };
     return u;
   });
   saveState();
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from('profiles').update({ clearance: newCls }).eq('id', userId);
+    } catch (e) {
+      console.warn("Supabase clearance update error:", e);
+    }
+  }
   alert(`권한 변경 완료: 해당 팀원의 결재 등급이 ${newCls}(으)로 변경되었습니다.`);
   renderAdminView();
-}
+};
 
-function adminDeleteUser(userId) {
+window.adminDeleteUser = async function(userId) {
+  const target = appState.users.find(u => String(u.id) === String(userId));
+  if (target && (target.isAdmin || target.email === 'nnqrt1983@gmail.com' || target.clearance === '1급')) {
+    alert("최고관리자(1급) 계정은 삭제할 수 없습니다.");
+    return;
+  }
   if (!confirm("해당 계정을 삭제하시겠습니까?")) return;
   appState.users = appState.users.filter(u => String(u.id) !== String(userId));
   saveState();
-  alert("계정 삭제 완료 - ");
+  if (supabaseClient) {
+    try {
+      await supabaseClient.from('profiles').delete().eq('id', userId);
+    } catch (e) {
+      console.warn("Supabase delete error:", e);
+    }
+  }
+  alert("계정 삭제가 완료되었습니다.");
   renderAdminView();
-}
+};
 
 function renderAdminPipelineTab(area) {
   const allTasks = appState.tasks || [];
@@ -4514,6 +4643,7 @@ function renderAdminPipelineTab(area) {
 }
 
 function adminOverrideTask(taskId, action) {
+  const actionText = action === 'APPROVE' ? '최종 승인' : '반려';
   if (!confirm(`1급 관리자 직권 통제\n해당 안건을 ${actionText} 처리하시겠습니까?`)) return;
 
   const now = new Date().toLocaleString('ko-KR');
@@ -4742,7 +4872,7 @@ function adminImportJSONHandler(event) {
 function renderAdminFinanceTab(area) {
   if (!area) return;
 
-  const isFinanceAuthorized = appState.currentUser && (appState.currentUser.clearance === '회계관리' || appState.currentUser.clearance === '1급' || appState.currentUser.isAdmin || appState.currentUser.id === 'usr-000' || (appState.currentUser.email && appState.currentUser.email.includes('admin')));
+  const isFinanceAuthorized = isUserFinanceAdmin(appState.currentUser);
   if (!isFinanceAuthorized) {
     area.innerHTML = `
       <div class="card" style="border: 2px solid #DC2626; background: #FEF2F2; padding: 24px; text-align: center;">
