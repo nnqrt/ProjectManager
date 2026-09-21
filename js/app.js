@@ -1172,11 +1172,18 @@ async function fetchSupabaseProfiles() {
         supabaseClient.from('profiles').update({ avatar: payload, team: appState.branding.subtitle || '인천시당' }).eq('id', targetId).then(() => {});
       }
 
-      // 2. Filter out rejected users and rejectedUserIds
+      // 2. Filter out rejected/deleted users and rejectedUserIds
       const rejectedIds = appState.rejectedUserIds || JSON.parse(localStorage.getItem('politic_sync_rejected_user_ids')) || [];
       appState.rejectedUserIds = rejectedIds;
 
-      const activeProfiles = data.filter(p => p.status !== 'REJECTED' && !rejectedIds.includes(String(p.id)));
+      const activeProfiles = data.filter(p => 
+        p.status !== 'REJECTED' && 
+        p.status !== 'DELETED' && 
+        p.email !== 'test_temp_check_pwd9999@example.com' &&
+        p.name !== '임시테스트' &&
+        !rejectedIds.includes(String(p.id)) &&
+        !rejectedIds.includes(p.email)
+      );
 
       appState.users = activeProfiles.map(p => {
         const existing = (appState.users || []).find(u => u.id === p.id || u.email === p.email);
@@ -1271,6 +1278,23 @@ let appState = {
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
   migrateTaskIds();
+
+  // Purge any legacy deleted or test accounts from local memory
+  const startRejectedIds = appState.rejectedUserIds || JSON.parse(localStorage.getItem('politic_sync_rejected_user_ids')) || [];
+  if (!startRejectedIds.includes('90bae10c-ac18-4374-86eb-2ad6620e2a52')) startRejectedIds.push('90bae10c-ac18-4374-86eb-2ad6620e2a52');
+  if (!startRejectedIds.includes('test_temp_check_pwd9999@example.com')) startRejectedIds.push('test_temp_check_pwd9999@example.com');
+  appState.rejectedUserIds = startRejectedIds;
+  appState.users = (appState.users || []).filter(u => 
+    u.id !== '90bae10c-ac18-4374-86eb-2ad6620e2a52' &&
+    u.email !== 'test_temp_check_pwd9999@example.com' &&
+    u.name !== '임시테스트' &&
+    u.status !== 'REJECTED' &&
+    u.status !== 'DELETED' &&
+    !startRejectedIds.includes(String(u.id)) &&
+    !startRejectedIds.includes(u.email)
+  );
+  saveState();
+
   updateLoginScreenUI();
   renderApp();
   populateFormChecklists();
@@ -1457,7 +1481,7 @@ async function handleLoginRegSubmit(e) {
   const email = document.getElementById('initRegId').value.trim();
   const pw = document.getElementById('initRegPw').value.trim();
   const pwConfirm = document.getElementById('initRegPwConfirm').value.trim();
-  const clearance = document.getElementById('initRegClearance').value;
+  const clearance = '3급'; // 최고관리자가 승인 시 직접 심사하여 최종 부여함
 
   if (!name || !title || !phone || !email || !pw || !pwConfirm) {
     alert("모든 가입 정보를 빠짐없이 입력해주세요.");
@@ -1540,6 +1564,15 @@ function closeAllModals() {
 }
 
 function saveState() {
+  const rejectedIds = appState.rejectedUserIds || [];
+  appState.users = (appState.users || []).filter(u => 
+    u.status !== 'REJECTED' && 
+    u.status !== 'DELETED' && 
+    !rejectedIds.includes(String(u.id)) &&
+    !rejectedIds.includes(u.email) &&
+    u.email !== 'test_temp_check_pwd9999@example.com' &&
+    u.name !== '임시테스트'
+  );
   localStorage.setItem('politic_sync_users', JSON.stringify(appState.users));
   localStorage.setItem('politic_sync_current_user', JSON.stringify(appState.currentUser));
   localStorage.setItem('politic_sync_tasks', JSON.stringify(appState.tasks));
@@ -1674,19 +1707,29 @@ function openUserAuthModal() {
   const pendingUsers = (appState.users || []).filter(u => 
     (u.status === 'PENDING' || u.status === 'PENDING_APPROVAL') && 
     u.status !== 'REJECTED' && 
-    !rejectedIds.includes(String(u.id))
+    u.status !== 'DELETED' && 
+    !rejectedIds.includes(String(u.id)) &&
+    !rejectedIds.includes(u.email) &&
+    u.email !== 'test_temp_check_pwd9999@example.com' &&
+    u.name !== '임시테스트'
   );
 
   if (isAdmin && pendingUsers.length > 0) {
     if (adminSec) adminSec.style.display = 'block';
     if (pendingContainer) {
       pendingContainer.innerHTML = pendingUsers.map(u => `
-        <div style="background: #FFF; border: 1px solid #991B1B; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #FFF; border: 1px solid #991B1B; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
           <div>
             <div style="font-size: 15px; font-weight: 800; color: #991B1B;">[승인 요청] ${formatUserDisplay(u)}</div>
-            <div style="font-size: 13px; color: var(--text-muted);">연락처: ${u.phone || '-'} | 이메일: ${u.email || '-'} | 권한: ${u.clearance || '2급'}</div>
+            <div style="font-size: 13px; color: var(--text-muted);">소속/직함: ${u.roleTitle || '-'} | 연락처: ${u.phone || '-'} | 이메일: ${u.email || '-'}</div>
           </div>
-          <div style="display: flex; gap: 6px;">
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <select id="modalPendingClearance_${u.id}" class="form-select" style="padding: 6px 10px; font-size: 13px; width: auto; font-weight: 800; border-color: #991B1B;" title="승인 시 부여할 등급 선택">
+              <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>2급 (중간결재권자)</option>
+              <option value="3급" ${u.clearance === '3급' || !u.clearance ? 'selected' : ''}>3급 (일반실무진)</option>
+              <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>1급 (최종결재권자)</option>
+              <option value="회계관리" ${u.clearance === '회계관리' ? 'selected' : ''}>회계관리 (예산/경비)</option>
+            </select>
             <button class="btn-primary" style="height: 36px; font-size: 13px; background: var(--approved-green);" onclick="approveUserRegistration('${u.id}')">정식 승인</button>
             <button class="btn-primary" style="height: 36px; font-size: 13px; background: var(--rejected-red);" onclick="rejectUserRegistration('${u.id}')">반려 삭제</button>
           </div>
@@ -1697,7 +1740,14 @@ function openUserAuthModal() {
     if (adminSec) adminSec.style.display = 'none';
   }
 
-  const activeUsers = (appState.users || []).filter(u => u.status !== 'REJECTED' && !rejectedIds.includes(String(u.id)));
+  const activeUsers = (appState.users || []).filter(u => 
+    u.status !== 'REJECTED' && 
+    u.status !== 'DELETED' && 
+    !rejectedIds.includes(String(u.id)) &&
+    !rejectedIds.includes(u.email) &&
+    u.email !== 'test_temp_check_pwd9999@example.com' &&
+    u.name !== '임시테스트'
+  );
   container.innerHTML = activeUsers.map(u => {
     const isApproved = u.status === 'APPROVED' || !u.status;
     return `
@@ -4789,30 +4839,47 @@ function renderAdminUsersTab(area) {
   const pendingUsers = (appState.users || []).filter(u => 
     (u.status === 'PENDING' || u.status === 'PENDING_APPROVAL') && 
     u.status !== 'REJECTED' && 
-    !rejectedIds.includes(String(u.id))
+    u.status !== 'DELETED' && 
+    !rejectedIds.includes(String(u.id)) &&
+    !rejectedIds.includes(u.email) &&
+    u.email !== 'test_temp_check_pwd9999@example.com' &&
+    u.name !== '임시테스트'
   );
   const approvedUsers = (appState.users || []).filter(u => 
     u.status !== 'PENDING' && 
     u.status !== 'PENDING_APPROVAL' && 
     u.status !== 'REJECTED' && 
-    !rejectedIds.includes(String(u.id))
+    u.status !== 'DELETED' && 
+    !rejectedIds.includes(String(u.id)) &&
+    !rejectedIds.includes(u.email) &&
+    u.email !== 'test_temp_check_pwd9999@example.com' &&
+    u.name !== '임시테스트'
   );
 
   let pendingHTML = '';
   if (pendingUsers.length > 0) {
     pendingHTML = `
       <div style="border: 2px solid #DC2626; background: #FEF2F2; padding: 14px; border-radius: 8px; margin-bottom: 18px;">
-        <h4 style="font-size: 16px; font-weight: 900; color: #991B1B; margin-bottom: 10px;">[긴급 승인 대기] 신규 회원 가입 신청자 (${pendingUsers.length}명) - 승인 시 즉시 활동 가능</h4>
+        <h4 style="font-size: 16px; font-weight: 900; color: #991B1B; margin-bottom: 10px;">[긴급 승인 대기] 신규 회원 가입 신청자 (${pendingUsers.length}명) - 관리자 등급 부여 후 승인</h4>
         <div style="display: flex; flex-direction: column; gap: 8px;">
           ${pendingUsers.map(u => `
             <div style="background: #FFF; border: 1px solid #991B1B; padding: 12px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
               <div>
-                <div style="font-size: 16px; font-weight: 900; color: #991B1B;">${u.name} [${u.clearance || '2급'}]</div>
-                <div style="font-size: 13px; color: var(--text-muted); font-weight: 700;">소속/직함: ${u.roleTitle} | 연락처: ${u.phone} | 이메일/ID: ${u.email}</div>
+                <div style="font-size: 16px; font-weight: 900; color: #991B1B;">${u.name}</div>
+                <div style="font-size: 13px; color: var(--text-muted); font-weight: 700;">소속/직함: ${u.roleTitle || '-'} | 연락처: ${u.phone || '-'} | 이메일/ID: ${u.email}</div>
               </div>
-              <div style="display: flex; gap: 6px;">
-                <button class="btn-primary" style="height: 38px; padding: 0 14px; font-size: 13px; background: var(--approved-green);" onclick="approveUserRegistration('${u.id}')">정식 승인</button>
-                <button class="btn-primary" style="height: 38px; padding: 0 14px; font-size: 13px; background: var(--rejected-red);" onclick="rejectUserRegistration('${u.id}')">가입 반려</button>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 11px; font-weight: 800; color: #991B1B;">부여할 권한 등급:</span>
+                  <select id="pendingClearance_${u.id}" class="form-select" style="padding: 6px 10px; font-size: 13px; width: auto; font-weight: 800; border-color: #991B1B;" title="승인 시 부여할 등급 선택">
+                    <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>2급 (중간결재권자)</option>
+                    <option value="3급" ${u.clearance === '3급' || !u.clearance ? 'selected' : ''}>3급 (일반실무진)</option>
+                    <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>1급 (최종결재권자)</option>
+                    <option value="회계관리" ${u.clearance === '회계관리' ? 'selected' : ''}>회계관리 (예산/경비)</option>
+                  </select>
+                </div>
+                <button class="btn-primary" style="height: 38px; padding: 0 14px; font-size: 13px; background: var(--approved-green); margin-top: 14px;" onclick="approveUserRegistration('${u.id}')">정식 승인</button>
+                <button class="btn-primary" style="height: 38px; padding: 0 14px; font-size: 13px; background: var(--rejected-red); margin-top: 14px;" onclick="rejectUserRegistration('${u.id}')">가입 반려</button>
               </div>
             </div>
           `).join('')}
@@ -4863,16 +4930,23 @@ function renderAdminUsersTab(area) {
 window.approveUserRegistration = async function(userId) {
   const user = (appState.users || []).find(u => String(u.id) === String(userId));
   if (!user) return;
+
+  const sel = document.getElementById('pendingClearance_' + userId) || document.getElementById('modalPendingClearance_' + userId);
+  const designatedClearance = sel ? sel.value : (user.clearance || '2급');
+
   user.status = 'APPROVED';
+  user.clearance = designatedClearance;
   saveState();
+
   if (supabaseClient) {
     try {
-      await supabaseClient.from('profiles').update({ status: 'APPROVED' }).eq('id', userId);
+      await supabaseClient.from('profiles').update({ status: 'APPROVED', clearance: designatedClearance }).eq('id', userId);
     } catch (e) {
       console.warn("Supabase approve error:", e);
     }
   }
-  alert(`정식 승인 완료: ${user.name} 님의 가입 신청이 정식 승인되었습니다.`);
+
+  alert(`정식 승인 완료: ${user.name} 님의 가입 신청이 [${designatedClearance}] 등급으로 승인되었습니다.`);
   const modal = document.getElementById('userAuthModal');
   if (modal && !modal.classList.contains('hidden')) {
     openUserAuthModal();
@@ -4886,12 +4960,16 @@ window.approveUserRegistration = async function(userId) {
 
 window.rejectUserRegistration = async function(userId) {
   if (!confirm("해당 사용자의 가입 신청을 반려하시겠습니까?\n반려 시 신청 내역이 영구히 삭제됩니다.")) return;
+  const target = (appState.users || []).find(u => String(u.id) === String(userId));
   const sId = String(userId);
   appState.rejectedUserIds = appState.rejectedUserIds || [];
   if (!appState.rejectedUserIds.includes(sId)) {
     appState.rejectedUserIds.push(sId);
   }
-  appState.users = (appState.users || []).filter(u => String(u.id) !== sId && u.status !== 'REJECTED');
+  if (target && target.email && !appState.rejectedUserIds.includes(target.email)) {
+    appState.rejectedUserIds.push(target.email);
+  }
+  appState.users = (appState.users || []).filter(u => String(u.id) !== sId && (!target || u.email !== target.email));
   saveState();
 
   if (supabaseClient) {
@@ -4940,17 +5018,20 @@ window.adminDeleteUser = async function(userId) {
     alert("최고관리자(1급) 계정은 삭제할 수 없습니다.");
     return;
   }
-  if (!confirm("해당 계정을 삭제하시겠습니까?\n삭제 시 회원 목록에서 완전히 제외됩니다.")) return;
+  if (!confirm("해당 계정을 완전히 삭제하시겠습니까?\n삭제 즉시 의원실 모든 명단 및 권한에서 영구 배제됩니다.")) return;
   const sId = String(userId);
   appState.rejectedUserIds = appState.rejectedUserIds || [];
   if (!appState.rejectedUserIds.includes(sId)) {
     appState.rejectedUserIds.push(sId);
   }
-  appState.users = (appState.users || []).filter(u => String(u.id) !== sId);
+  if (target && target.email && !appState.rejectedUserIds.includes(target.email)) {
+    appState.rejectedUserIds.push(target.email);
+  }
+  appState.users = (appState.users || []).filter(u => String(u.id) !== sId && (!target || u.email !== target.email));
   saveState();
   if (supabaseClient) {
     try {
-      await supabaseClient.from('profiles').update({ status: 'REJECTED' }).eq('id', userId);
+      await supabaseClient.from('profiles').update({ status: 'DELETED' }).eq('id', userId);
       try {
         await supabaseClient.from('profiles').delete().eq('id', userId);
       } catch (delErr) {}
@@ -4958,7 +5039,7 @@ window.adminDeleteUser = async function(userId) {
       console.warn("Supabase delete error:", e);
     }
   }
-  alert("계정 삭제가 완료되었습니다.");
+  alert("계정 삭제가 완료되었습니다. 해당 사용자는 모든 회원 목록에서 영구히 삭제되었습니다.");
   const modal = document.getElementById('userAuthModal');
   if (modal && !modal.classList.contains('hidden')) {
     openUserAuthModal();
@@ -5386,13 +5467,13 @@ function renderAdminFinanceTab(area) {
 
       <!-- 2. INTERACTIVE LEDGER ENTRY FORM (INCOME & EXPENSE SELECTION) -->
       <div style="background: #FFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-bottom: 24px;">
-        <h4 style="font-size: 16px; font-weight: 900; color: var(--primary-navy); margin-bottom: 12px;">+ 신규 회계 장부 수기 기입 (지출/수입 구분 등록)</h4>
-        <form onsubmit="handleAddLedgerEntry(event)" style="display: grid; grid-template-columns: 140px 140px 1.5fr 1.2fr 2fr 90px; gap: 10px; align-items: flex-end;">
+        <h4 style="font-size: 16px; font-weight: 900; color: var(--primary-navy); margin-bottom: 12px;">+ 신규 회계 장부 수기 기입 (지출/수입 등록)</h4>
+        <form onsubmit="handleAddLedgerEntry(event)" style="display: grid; grid-template-columns: 105px 115px 2.8fr 2fr 1.3fr 95px; gap: 10px; align-items: flex-end;">
           <div>
-            <label style="font-size: 12px; font-weight: 800; display: block; margin-bottom: 4px;">구분 (수입/지출)</label>
+            <label style="font-size: 12px; font-weight: 800; display: block; margin-bottom: 4px;">구분</label>
             <select id="accLedgerDirection" class="form-select" style="width: 100%; padding: 8px; font-weight: 900;" onchange="handleLedgerDirectionChange(this.value)">
-              <option value="EXPENSE" style="color: #DC2626;">지출 (적색)</option>
-              <option value="INCOME" style="color: #2563EB;">수입 (파란색)</option>
+              <option value="EXPENSE" style="color: #DC2626;">지출</option>
+              <option value="INCOME" style="color: #2563EB;">수입</option>
             </select>
           </div>
           <div>

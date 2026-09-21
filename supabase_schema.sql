@@ -41,6 +41,11 @@ CREATE POLICY "Admins can update all profiles."
   ON public.profiles FOR UPDATE
   USING ( (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true );
 
+-- 정책 D: 관리자(is_admin=true)는 프로필을 삭제(DELETE)할 수 있음
+CREATE POLICY "Admins can delete profiles."
+  ON public.profiles FOR DELETE
+  USING ( (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true );
+
 -- 4. 회원가입 트리거 설정
 -- 사용자가 Supabase Auth(회원가입)를 통해 가입하면, profiles 테이블에 자동으로 PENDING 상태로 레코드가 생성됩니다.
 CREATE OR REPLACE FUNCTION public.handle_new_user()
