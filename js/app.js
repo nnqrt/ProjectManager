@@ -198,6 +198,33 @@ window.handleDeleteLedgerEntry = function(id) {
 
 
 // --- BRANDING (EMBLEM & SUBTITLE) LOGIC ---
+function resizeImageToCanvas(dataUrl, maxDim = 256) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width;
+      let h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/png', 0.85));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 window.handleEmblemClick = function() {
   if (appState.isSidebarCollapsed) {
     // 접혀진 상태에서는 엠블럼 클릭 시 메뉴 펼침
@@ -209,13 +236,20 @@ window.handleEmblemClick = function() {
   }
 };
 
-window.handleEmblemUpload = function(event) {
+window.handleEmblemUpload = async function(event) {
   const file = event.target.files[0];
   if (!file) return;
 
   const reader = new FileReader();
-  reader.onload = function(e) {
-    const dataUrl = e.target.result;
+  reader.onload = async function(e) {
+    let rawDataUrl = e.target.result;
+    let dataUrl = rawDataUrl;
+    try {
+      dataUrl = await resizeImageToCanvas(rawDataUrl, 256);
+    } catch(err) {
+      console.warn("Resize warning:", err);
+    }
+
     appState.branding = appState.branding || {};
     appState.branding.emblem = dataUrl;
     saveState();
@@ -227,12 +261,27 @@ window.handleEmblemUpload = function(event) {
       img.style.display = 'block';
       def.style.display = 'none';
     }
-    alert("당 엠블럼 로고가 성공적으로 등록/수정되었습니다.");
+
+    // 전사 모든 회원을 위한 Supabase 클라우드 동기화 (최고관리자 프로필에 저장)
+    if (supabaseClient) {
+      try {
+        const payload = JSON.stringify({
+          emblem: dataUrl,
+          subtitle: appState.branding.subtitle || '인천시당'
+        });
+        const targetId = appState.currentUser?.id || '85b55d3d-7c43-4060-b117-77fe0b9dea12';
+        await supabaseClient.from('profiles').update({ avatar: payload, team: appState.branding.subtitle || '인천시당' }).eq('id', targetId);
+      } catch (err) {
+        console.warn("Supabase branding sync error:", err);
+      }
+    }
+
+    alert("당 엠블럼 로고가 성공적으로 등록되었으며, 전사 모든 회원에게 실시간 동기화되었습니다.");
   };
   reader.readAsDataURL(file);
 };
 
-window.editSidebarSubtitle = function() {
+window.editSidebarSubtitle = async function() {
   const current = appState.branding?.subtitle || '인천시당';
   const next = prompt("소속 시당 또는 당협 명칭을 입력하세요:", current);
   if (next !== null && next.trim() !== '') {
@@ -241,6 +290,23 @@ window.editSidebarSubtitle = function() {
     saveState();
     const el = document.getElementById('sidebarSubtitle');
     if (el) el.textContent = next.trim();
+
+    // 전사 모든 회원을 위한 Supabase 클라우드 동기화
+    if (supabaseClient) {
+      try {
+        const payload = JSON.stringify({
+          emblem: appState.branding.emblem || '',
+          subtitle: appState.branding.subtitle
+        });
+        const targetId = appState.currentUser?.id || '85b55d3d-7c43-4060-b117-77fe0b9dea12';
+        await supabaseClient.from('profiles').update({
+          avatar: payload,
+          team: appState.branding.subtitle
+        }).eq('id', targetId);
+      } catch (err) {
+        console.warn("Supabase subtitle sync error:", err);
+      }
+    }
   }
 };
 
@@ -1079,7 +1145,40 @@ async function fetchSupabaseProfiles() {
   try {
     const { data, error } = await supabaseClient.from('profiles').select('*');
     if (!error && data && data.length > 0) {
-      appState.users = data.map(p => {
+      // 1. Sync & Restore 당 엠블럼 및 시당 부제목 (최고관리자 프로필에서 전사 로드)
+      const adminProfile = data.find(p => p.email === 'nnqrt1983@gmail.com' || p.clearance === '1급' || p.is_admin === true);
+      if (adminProfile && adminProfile.avatar) {
+        try {
+          if (adminProfile.avatar.startsWith('{')) {
+            const parsed = JSON.parse(adminProfile.avatar);
+            if (parsed.emblem) appState.branding.emblem = parsed.emblem;
+            if (parsed.subtitle) appState.branding.subtitle = parsed.subtitle;
+          } else if (adminProfile.avatar.startsWith('data:image')) {
+            appState.branding.emblem = adminProfile.avatar;
+            if (adminProfile.team) appState.branding.subtitle = adminProfile.team;
+          }
+        } catch(e) {
+          console.warn("Branding parse from Supabase warning:", e);
+        }
+      }
+
+      // If current user is super admin and has a local emblem not yet synced to Supabase, sync it now
+      if (isUserSuperAdmin(appState.currentUser) && appState.branding && appState.branding.emblem && (!adminProfile || !adminProfile.avatar || (!adminProfile.avatar.startsWith('{') && !adminProfile.avatar.startsWith('data:image')))) {
+        const payload = JSON.stringify({
+          emblem: appState.branding.emblem,
+          subtitle: appState.branding.subtitle || '인천시당'
+        });
+        const targetId = appState.currentUser?.id || '85b55d3d-7c43-4060-b117-77fe0b9dea12';
+        supabaseClient.from('profiles').update({ avatar: payload, team: appState.branding.subtitle || '인천시당' }).eq('id', targetId).then(() => {});
+      }
+
+      // 2. Filter out rejected users and rejectedUserIds
+      const rejectedIds = appState.rejectedUserIds || JSON.parse(localStorage.getItem('politic_sync_rejected_user_ids')) || [];
+      appState.rejectedUserIds = rejectedIds;
+
+      const activeProfiles = data.filter(p => p.status !== 'REJECTED' && !rejectedIds.includes(String(p.id)));
+
+      appState.users = activeProfiles.map(p => {
         const existing = (appState.users || []).find(u => u.id === p.id || u.email === p.email);
         return {
           id: p.id,
@@ -1089,7 +1188,7 @@ async function fetchSupabaseProfiles() {
           clearance: p.clearance || '1급',
           phone: p.phone || (existing ? existing.phone : ''),
           email: p.email,
-          avatar: p.avatar || (p.name ? p.name.charAt(0) : '류'),
+          avatar: p.avatar && !p.avatar.startsWith('data:image') && !p.avatar.startsWith('{') ? p.avatar : (p.name ? p.name.charAt(0) : '류'),
           isAdmin: p.is_admin === true || p.clearance === '1급' || p.email === 'nnqrt1983@gmail.com',
           status: p.status || 'APPROVED',
           photoUrl: p.photo_url || (existing ? existing.photoUrl : null),
@@ -1157,6 +1256,7 @@ let appState = {
   isSidebarCollapsed: false,
   isLoggedIn: localStorage.getItem('politic_sync_logged_in') === 'true',
   hideCompletedSimpleTasks: true,
+  rejectedUserIds: JSON.parse(localStorage.getItem('politic_sync_rejected_user_ids')) || [],
   branding: JSON.parse(localStorage.getItem('politic_sync_branding')) || {
     emblem: '',
     subtitle: '인천시당'
@@ -1176,6 +1276,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateFormChecklists();
   updateTestModeUI();
   initGlobalESCListener();
+  if (supabaseClient) {
+    try {
+      await supabaseClient.auth.getSession();
+    } catch(e) {}
+  }
   await fetchSupabaseProfiles();
   if (appState.isLoggedIn && appState.currentUser && (appState.currentUser.mustChangePassword || appState.currentUser.isInitialPassword)) {
     openMandatoryPasswordChangeModal();
@@ -1450,6 +1555,7 @@ function saveState() {
   localStorage.setItem('politic_sync_accounting_settings', JSON.stringify(appState.accountingSettings || { totalBudget: 0, reserveBudget: 0 }));
   localStorage.setItem('politic_sync_accounting_ledger', JSON.stringify(appState.accountingLedger || []));
   localStorage.setItem('politic_sync_branding', JSON.stringify(appState.branding || { emblem: '', subtitle: '인천시당' }));
+  localStorage.setItem('politic_sync_rejected_user_ids', JSON.stringify(appState.rejectedUserIds || []));
 }
 
 function resetSystemData() {
@@ -1563,8 +1669,13 @@ function openUserAuthModal() {
   const pendingContainer = document.getElementById('pendingUserListContainer');
 
   // Check if current user is 1급 Admin
-  const isAdmin = appState.currentUser.clearance === '1급';
-  const pendingUsers = appState.users.filter(u => u.status === 'PENDING_APPROVAL');
+  const isAdmin = isUserSuperAdmin(appState.currentUser);
+  const rejectedIds = appState.rejectedUserIds || JSON.parse(localStorage.getItem('politic_sync_rejected_user_ids')) || [];
+  const pendingUsers = (appState.users || []).filter(u => 
+    (u.status === 'PENDING' || u.status === 'PENDING_APPROVAL') && 
+    u.status !== 'REJECTED' && 
+    !rejectedIds.includes(String(u.id))
+  );
 
   if (isAdmin && pendingUsers.length > 0) {
     if (adminSec) adminSec.style.display = 'block';
@@ -1586,12 +1697,15 @@ function openUserAuthModal() {
     if (adminSec) adminSec.style.display = 'none';
   }
 
-  container.innerHTML = appState.users.map(u => {
+  const activeUsers = (appState.users || []).filter(u => u.status !== 'REJECTED' && !rejectedIds.includes(String(u.id)));
+  container.innerHTML = activeUsers.map(u => {
     const isApproved = u.status === 'APPROVED' || !u.status;
     return `
       <div style="background-color: ${u.id === appState.currentUser.id ? '#F0FDF4' : '#FFF'}; border: 1px solid ${u.id === appState.currentUser.id ? 'var(--approved-green)' : 'var(--border-color)'}; padding: 12px 14px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="user-avatar" style="width: 38px; height: 38px; font-size: 15px;">${u.avatar}</div>
+          <div class="user-avatar" style="width: 38px; height: 38px; font-size: 15px; overflow:hidden;">
+            ${u.photoUrl ? `<img src="${u.photoUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : (u.avatar && !u.avatar.startsWith('{') && !u.avatar.startsWith('data:image') ? u.avatar : (u.name ? u.name.charAt(0) : '류'))}
+          </div>
           <div>
             <div style="font-size: 16px; font-weight: 800; color: var(--text-dark);">${u.name} <span style="font-size:12px; color:var(--primary-navy);">${u.clearance || '2급'}</span> ${!isApproved ? '<strong style="color:#DC2626; font-size:12px;">가입 승인 대기중</strong>' : ''}</div>
             <div style="font-size: 13px; font-weight: 700; color: var(--text-muted);">${u.roleTitle} | ${u.phone || '010-0000-0000'}</div>
@@ -1607,26 +1721,6 @@ function openUserAuthModal() {
   }).join('');
 
   document.getElementById('userAuthModal').classList.remove('hidden');
-}
-
-function approveUserRegistration(userId) {
-  appState.users = appState.users.map(u => {
-    if (u.id === userId) return { ...u, status: 'APPROVED' };
-    return u;
-  });
-  saveState();
-  populateFormChecklists();
-  openUserAuthModal();
-  alert("정식 팀원 승인 완료 - 해당 팀원이 승인되어 정상적으로 계정을 전환하고 결재 라인에 지정할 수 있습니다.");
-}
-
-function rejectUserRegistration(userId) {
-  if (!confirm("해당 팀원의 가입 신청을 반려 및 삭제하시겠습니까?")) return;
-  appState.users = appState.users.filter(u => u.id !== userId);
-  saveState();
-  populateFormChecklists();
-  openUserAuthModal();
-  alert("가입 반려 완료 - 해당 가입 신청 내역이 삭제되었습니다.");
 }
 
 function closeUserAuthModal() {
@@ -4691,8 +4785,18 @@ function renderAdminView() {
 }
 
 function renderAdminUsersTab(area) {
-  const pendingUsers = (appState.users || []).filter(u => u.status === 'PENDING' || u.status === 'PENDING_APPROVAL');
-  const approvedUsers = (appState.users || []).filter(u => u.status !== 'PENDING' && u.status !== 'PENDING_APPROVAL');
+  const rejectedIds = appState.rejectedUserIds || JSON.parse(localStorage.getItem('politic_sync_rejected_user_ids')) || [];
+  const pendingUsers = (appState.users || []).filter(u => 
+    (u.status === 'PENDING' || u.status === 'PENDING_APPROVAL') && 
+    u.status !== 'REJECTED' && 
+    !rejectedIds.includes(String(u.id))
+  );
+  const approvedUsers = (appState.users || []).filter(u => 
+    u.status !== 'PENDING' && 
+    u.status !== 'PENDING_APPROVAL' && 
+    u.status !== 'REJECTED' && 
+    !rejectedIds.includes(String(u.id))
+  );
 
   let pendingHTML = '';
   if (pendingUsers.length > 0) {
@@ -4730,7 +4834,7 @@ function renderAdminUsersTab(area) {
           <div style="background: #FFF; border: 1px solid var(--border-color); padding: 12px 14px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div style="display: flex; align-items: center; gap: 12px;">
               <div class="user-avatar" style="width: 42px; height: 42px; font-size: 16px; background: ${u.isAdmin ? '#991B1B' : ''}; overflow: hidden;">
-                ${u.photoUrl ? `<img src="${u.photoUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : (u.avatar || (u.name ? u.name.charAt(0) : '류'))}
+                ${u.photoUrl ? `<img src="${u.photoUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">` : (u.avatar && !u.avatar.startsWith('{') && !u.avatar.startsWith('data:image') ? u.avatar : (u.name ? u.name.charAt(0) : '류'))}
               </div>
               <div>
                 <div style="font-size: 16px; font-weight: 900; color: var(--text-dark);">
@@ -4757,7 +4861,7 @@ function renderAdminUsersTab(area) {
 }
 
 window.approveUserRegistration = async function(userId) {
-  const user = appState.users.find(u => String(u.id) === String(userId));
+  const user = (appState.users || []).find(u => String(u.id) === String(userId));
   if (!user) return;
   user.status = 'APPROVED';
   saveState();
@@ -4769,23 +4873,48 @@ window.approveUserRegistration = async function(userId) {
     }
   }
   alert(`정식 승인 완료: ${user.name} 님의 가입 신청이 정식 승인되었습니다.`);
-  renderAdminView();
+  const modal = document.getElementById('userAuthModal');
+  if (modal && !modal.classList.contains('hidden')) {
+    openUserAuthModal();
+  }
+  populateFormChecklists();
+  renderApp();
+  if (appState.activeTab === 'adminView') {
+    renderAdminView();
+  }
 };
 
 window.rejectUserRegistration = async function(userId) {
-  if (!confirm("해당 사용자의 가입 신청을 반려하시겠습니까?")) return;
-  const user = appState.users.find(u => String(u.id) === String(userId));
-  appState.users = appState.users.filter(u => String(u.id) !== String(userId));
+  if (!confirm("해당 사용자의 가입 신청을 반려하시겠습니까?\n반려 시 신청 내역이 영구히 삭제됩니다.")) return;
+  const sId = String(userId);
+  appState.rejectedUserIds = appState.rejectedUserIds || [];
+  if (!appState.rejectedUserIds.includes(sId)) {
+    appState.rejectedUserIds.push(sId);
+  }
+  appState.users = (appState.users || []).filter(u => String(u.id) !== sId && u.status !== 'REJECTED');
   saveState();
+
   if (supabaseClient) {
     try {
-      await supabaseClient.from('profiles').delete().eq('id', userId);
+      await supabaseClient.from('profiles').update({ status: 'REJECTED' }).eq('id', userId);
+      try {
+        await supabaseClient.from('profiles').delete().eq('id', userId);
+      } catch (delErr) {}
     } catch (e) {
       console.warn("Supabase reject error:", e);
     }
   }
-  alert("가입 반려 완료: 해당 사용자의 가입 신청이 반려되었습니다.");
-  renderAdminView();
+
+  alert("가입 반려 완료: 해당 사용자의 가입 신청이 반려 및 영구 삭제되었습니다.");
+  const modal = document.getElementById('userAuthModal');
+  if (modal && !modal.classList.contains('hidden')) {
+    openUserAuthModal();
+  }
+  populateFormChecklists();
+  renderApp();
+  if (appState.activeTab === 'adminView') {
+    renderAdminView();
+  }
 };
 
 window.adminChangeUserClearance = async function(userId, newCls) {
@@ -4806,24 +4935,44 @@ window.adminChangeUserClearance = async function(userId, newCls) {
 };
 
 window.adminDeleteUser = async function(userId) {
-  const target = appState.users.find(u => String(u.id) === String(userId));
+  const target = (appState.users || []).find(u => String(u.id) === String(userId));
   if (target && (target.isAdmin || target.email === 'nnqrt1983@gmail.com' || target.clearance === '1급')) {
     alert("최고관리자(1급) 계정은 삭제할 수 없습니다.");
     return;
   }
-  if (!confirm("해당 계정을 삭제하시겠습니까?")) return;
-  appState.users = appState.users.filter(u => String(u.id) !== String(userId));
+  if (!confirm("해당 계정을 삭제하시겠습니까?\n삭제 시 회원 목록에서 완전히 제외됩니다.")) return;
+  const sId = String(userId);
+  appState.rejectedUserIds = appState.rejectedUserIds || [];
+  if (!appState.rejectedUserIds.includes(sId)) {
+    appState.rejectedUserIds.push(sId);
+  }
+  appState.users = (appState.users || []).filter(u => String(u.id) !== sId);
   saveState();
   if (supabaseClient) {
     try {
-      await supabaseClient.from('profiles').delete().eq('id', userId);
+      await supabaseClient.from('profiles').update({ status: 'REJECTED' }).eq('id', userId);
+      try {
+        await supabaseClient.from('profiles').delete().eq('id', userId);
+      } catch (delErr) {}
     } catch (e) {
       console.warn("Supabase delete error:", e);
     }
   }
   alert("계정 삭제가 완료되었습니다.");
-  renderAdminView();
+  const modal = document.getElementById('userAuthModal');
+  if (modal && !modal.classList.contains('hidden')) {
+    openUserAuthModal();
+  }
+  populateFormChecklists();
+  renderApp();
+  if (appState.activeTab === 'adminView') {
+    renderAdminView();
+  }
 };
+
+var approveUserRegistration = window.approveUserRegistration;
+var rejectUserRegistration = window.rejectUserRegistration;
+var adminDeleteUser = window.adminDeleteUser;
 
 function renderAdminPipelineTab(area) {
   const allTasks = appState.tasks || [];
