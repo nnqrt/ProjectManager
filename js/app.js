@@ -4974,13 +4974,20 @@ window.rejectUserRegistration = async function(userId) {
 
   if (supabaseClient) {
     try {
-      await supabaseClient.from('profiles').update({ status: 'REJECTED' }).eq('id', userId);
-      try {
-        await supabaseClient.from('profiles').delete().eq('id', userId);
-      } catch (delErr) {}
-    } catch (e) {
-      console.warn("Supabase reject error:", e);
+      // 1. DB 함수 호출하여 profiles 및 auth.users 동시 완전 삭제
+      await supabaseClient.rpc('delete_user_by_admin', { target_user_id: userId });
+    } catch (rpcErr) {
+      console.warn("RPC delete warning:", rpcErr);
     }
+    try {
+      // 2. profiles 테이블 직접 DELETE
+      await supabaseClient.from('profiles').delete().eq('id', userId);
+    } catch (delErr) {
+      console.warn("Direct delete warning:", delErr);
+    }
+    try {
+      await supabaseClient.from('profiles').update({ status: 'REJECTED' }).eq('id', userId);
+    } catch (e) {}
   }
 
   alert("가입 반려 완료: 해당 사용자의 가입 신청이 반려 및 영구 삭제되었습니다.");
@@ -5031,13 +5038,20 @@ window.adminDeleteUser = async function(userId) {
   saveState();
   if (supabaseClient) {
     try {
-      await supabaseClient.from('profiles').update({ status: 'DELETED' }).eq('id', userId);
-      try {
-        await supabaseClient.from('profiles').delete().eq('id', userId);
-      } catch (delErr) {}
-    } catch (e) {
-      console.warn("Supabase delete error:", e);
+      // 1. DB 함수 호출하여 profiles 및 auth.users 동시 완전 삭제
+      await supabaseClient.rpc('delete_user_by_admin', { target_user_id: userId });
+    } catch (rpcErr) {
+      console.warn("RPC delete warning:", rpcErr);
     }
+    try {
+      // 2. profiles 테이블 직접 DELETE
+      await supabaseClient.from('profiles').delete().eq('id', userId);
+    } catch (delErr) {
+      console.warn("Direct delete warning:", delErr);
+    }
+    try {
+      await supabaseClient.from('profiles').update({ status: 'DELETED' }).eq('id', userId);
+    } catch (e) {}
   }
   alert("계정 삭제가 완료되었습니다. 해당 사용자는 모든 회원 목록에서 영구히 삭제되었습니다.");
   const modal = document.getElementById('userAuthModal');
