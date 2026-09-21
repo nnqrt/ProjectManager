@@ -8,8 +8,8 @@
 -- ==============================================================================
 
 -- 1. profiles 테이블 생성 (Supabase의 auth.users 와 연동되는 공개 프로필 정보)
-CREATE TABLE public.profiles (
-  id uuid REFERENCES auth.users NOT NULL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL PRIMARY KEY,
   name text NOT NULL,
   team text,
   role_title text,
@@ -27,24 +27,31 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- 3. RLS 보안 정책 설정
 -- 정책 A: 누구나 프로필을 읽을 수 있음 (결재선 등을 보여주기 위해 필요)
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone." ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone."
   ON public.profiles FOR SELECT
   USING ( true );
 
 -- 정책 B: 사용자는 '자신의' 프로필 정보만 수정할 수 있음
+DROP POLICY IF EXISTS "Users can update own profile." ON public.profiles;
 CREATE POLICY "Users can update own profile."
   ON public.profiles FOR UPDATE
   USING ( auth.uid() = id );
 
 -- 정책 C: 오직 관리자(is_admin=true)만 프로필 상태를 승인(APPROVED)할 수 있음
+DROP POLICY IF EXISTS "Admins can update all profiles." ON public.profiles;
 CREATE POLICY "Admins can update all profiles."
   ON public.profiles FOR UPDATE
   USING ( (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true );
 
--- 정책 D: 관리자(is_admin=true)는 프로필을 삭제(DELETE)할 수 있음
+-- 정책 D: 관리자(is_admin=true) 및 본인은 프로필을 삭제(DELETE)할 수 있음
+DROP POLICY IF EXISTS "Admins can delete profiles." ON public.profiles;
 CREATE POLICY "Admins can delete profiles."
   ON public.profiles FOR DELETE
-  USING ( (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true );
+  USING ( 
+    auth.uid() = id 
+    OR (SELECT is_admin FROM public.profiles WHERE id = auth.uid()) = true 
+  );
 
 -- 4. 회원가입 트리거 설정
 -- 사용자가 Supabase Auth(회원가입)를 통해 가입하면, profiles 테이블에 자동으로 PENDING 상태로 레코드가 생성됩니다.
@@ -62,18 +69,35 @@ BEGIN
     new.raw_user_meta_data->>'phone',
     new.raw_user_meta_data->>'avatar',
     'PENDING'
-  );
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    name = COALESCE(EXCLUDED.name, public.profiles.name);
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- ==============================================================================
--- 5. 테스트용 최고관리자 계정 등록 방법
--- 회원가입 UI에서 admin@assembly.go.kr (또는 원하는 이메일)로 가입 후,
--- SQL Editor에서 아래 명령어를 실행하여 수동으로 권한을 부여하세요:
--- UPDATE public.profiles SET is_admin = true, status = 'APPROVED' WHERE email = 'admin@assembly.go.kr';
--- ==============================================================================
+-- 5. 최고관리자용 계정 완전 삭제 RPC 함수 (auth.users + profiles 동시 삭제)
+CREATE OR REPLACE FUNCTION public.delete_user_by_admin(target_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- 최고관리자(nnqrt1983@gmail.com) 계정은 삭제 보호
+  IF EXISTS (SELECT 1 FROM auth.users WHERE id = target_user_id AND LOWER(email) = 'nnqrt1983@gmail.com') THEN
+    RAISE EXCEPTION '최고관리자 계정은 삭제할 수 없습니다.';
+  END IF;
+
+  DELETE FROM public.profiles WHERE id = target_user_id;
+  DELETE FROM auth.users WHERE id = target_user_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.delete_user_by_admin(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_user_by_admin(uuid) TO anon;
