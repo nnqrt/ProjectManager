@@ -766,6 +766,68 @@ window.switchAssigneeSubTab = function(tab) {
   renderAssigneeView();
 };
 
+window.handleProgressImageSelect = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const fileNameEl = document.getElementById('progressImageFileName');
+  if (fileNameEl) fileNameEl.textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const img = new Image();
+    img.onload = function() {
+      // Compress to max 800px width/height and 0.75 quality JPEG
+      const canvas = document.createElement('canvas');
+      const maxDim = 800;
+      let width = img.width;
+      let height = img.height;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+
+      const dataInput = document.getElementById('progressImageData');
+      if (dataInput) dataInput.value = dataUrl;
+
+      const previewImg = document.getElementById('progressImagePreview');
+      if (previewImg) previewImg.src = dataUrl;
+
+      const previewContainer = document.getElementById('progressImagePreviewContainer');
+      if (previewContainer) previewContainer.style.display = 'block';
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.clearProgressImage = function() {
+  const dataInput = document.getElementById('progressImageData');
+  if (dataInput) dataInput.value = '';
+
+  const fileInput = document.getElementById('progressImageInput');
+  if (fileInput) fileInput.value = '';
+
+  const fileNameEl = document.getElementById('progressImageFileName');
+  if (fileNameEl) fileNameEl.textContent = '선택된 파일 없음';
+
+  const previewContainer = document.getElementById('progressImagePreviewContainer');
+  if (previewContainer) previewContainer.style.display = 'none';
+
+  const previewImg = document.getElementById('progressImagePreview');
+  if (previewImg) previewImg.src = '';
+};
+
 window.openProgressModal = function(taskId) {
   const task = (appState.tasks || []).find(t => String(t.id) === String(taskId));
   if (!task) return;
@@ -773,6 +835,11 @@ window.openProgressModal = function(taskId) {
   document.getElementById('progressTaskId').value = task.id;
   document.getElementById('progressTaskTitle').textContent = task.title;
   document.getElementById('progressContent').value = '';
+  
+  if (typeof clearProgressImage === 'function') {
+    clearProgressImage();
+  }
+
   const currentPct = task.progressPercent || 30;
   const slider = document.getElementById('modalProgressSlider');
   if (slider) slider.value = currentPct;
@@ -789,6 +856,8 @@ window.handleSubmitProgress = function(e) {
   const taskId = document.getElementById('progressTaskId').value;
   const percent = parseInt(document.getElementById('progressPercent').value, 10) || 50;
   const content = document.getElementById('progressContent').value.trim();
+  const imageDataEl = document.getElementById('progressImageData');
+  const imageUrl = imageDataEl ? imageDataEl.value : '';
 
   const task = (appState.tasks || []).find(t => String(t.id) === String(taskId));
   if (!task) return;
@@ -801,7 +870,8 @@ window.handleSubmitProgress = function(e) {
     role: appState.currentUser.roleTitle || '',
     percent: percent,
     date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString().slice(0,5),
-    content: content
+    content: content,
+    imageUrl: imageUrl || null
   });
 
   saveState();
@@ -810,7 +880,7 @@ window.handleSubmitProgress = function(e) {
   if (!document.getElementById('taskDetailModal').classList.contains('hidden')) {
     openTaskDetailModal(task.id);
   }
-  alert("업무 진행 사항이 성공적으로 등록되었습니다. 결재자와 요청자에게 실시간 공유됩니다.");
+  alert("업무 진행 사항 및 중간메모가 성공적으로 등록되었습니다." + (imageUrl ? " (사진 첨부 완료)" : ""));
 };
 
 window.handleCompleteTask = function(taskId) {
@@ -2861,7 +2931,15 @@ function openTaskDetailModal(taskId) {
               </span>
               <span style="font-size: 12px; color: var(--text-muted);">${p.date}</span>
             </div>
-            <div style="font-size: 13px; color: var(--text-dark); line-height: 1.5;">${p.content}</div>
+            <div style="font-size: 13px; color: var(--text-dark); line-height: 1.5; white-space: pre-wrap;">${p.content}</div>
+            ${p.imageUrl ? `
+              <div style="margin-top: 8px;">
+                <a href="${p.imageUrl}" target="_blank" onclick="event.stopPropagation();" title="클릭하여 원본 사진 보기">
+                  <img src="${p.imageUrl}" style="max-width: 260px; max-height: 180px; border-radius: 6px; border: 1px solid var(--border-color); object-fit: contain; background: #F8FAFC; display: block; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                </a>
+                <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">📷 첨부 이미지 (클릭 시 새 탭에서 원본 확대)</span>
+              </div>
+            ` : ''}
           </div>
         `).join('') : '<div style="font-size: 13px; color: var(--text-muted); text-align: center; padding: 12px;">아직 등록된 업무 진행 상황이 없습니다. 상단 버튼으로 중간 보고를 작성하세요.</div>'}
       </div>
@@ -3007,6 +3085,21 @@ function renderAssigneeView() {
           </div>
 
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; max-height: 54px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${t.summary}</p>
+
+          ${(t.progressUpdates && t.progressUpdates.length > 0) ? (() => {
+            const latest = t.progressUpdates[t.progressUpdates.length - 1];
+            return `
+              <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; margin-bottom: 10px; font-size: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                  <span style="font-weight: 800; color: var(--primary-navy);">최근 중간메모:</span>
+                  <span style="color: var(--text-muted); font-size: 11px;">${latest.date}</span>
+                </div>
+                <div style="color: var(--text-dark); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                  ${latest.imageUrl ? '📷 ' : ''}${latest.content}
+                </div>
+              </div>
+            `;
+          })() : ''}
 
           <!-- HORIZONTAL DRAGGABLE PROGRESS GAUGE -->
           <div style="background: #F8FAFC; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;" onclick="event.stopPropagation();">

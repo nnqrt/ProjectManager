@@ -1007,9 +1007,31 @@
           </div>
           <input type="hidden" id="progressPercent" value="30">
         </div>
-        <div style="margin-bottom: 16px;">
-          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">진행 상황 상세 내용</label>
+        <div style="margin-bottom: 14px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">진행 상황 상세 내용 (중간메모)</label>
           <textarea id="progressContent" class="form-textarea" rows="4" style="width: 100%; padding: 10px; line-height: 1.5;" placeholder="현재까지의 진행 상황, 현장 피드백, 협의 결과 등을 입력하세요. 결재자와 요청자가 즉시 확인할 수 있습니다." required></textarea>
+        </div>
+        
+        <!-- Intermediate Memo Image Upload -->
+        <div style="margin-bottom: 16px; background: #F8FAFC; border: 1px dashed var(--border-color); border-radius: 8px; padding: 12px 14px;">
+          <label style="font-size: 13px; font-weight: 800; display: block; margin-bottom: 6px; color: var(--primary-navy);">현장 사진 및 증빙 이미지 첨부 (선택)</label>
+          <input type="file" id="progressImageInput" accept="image/*" style="display: none;" onchange="handleProgressImageSelect(event)">
+          <input type="hidden" id="progressImageData">
+          
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button type="button" class="btn-outline" style="font-size: 13px; padding: 6px 14px; display: flex; align-items: center; gap: 6px; background: #FFF; border-color: var(--primary-navy); color: var(--primary-navy); font-weight: 800; cursor: pointer;" onclick="document.getElementById('progressImageInput').click()">
+              📷 사진/이미지 첨부
+            </button>
+            <span id="progressImageFileName" style="font-size: 12px; color: var(--text-muted);">선택된 파일 없음</span>
+          </div>
+
+          <!-- Image Preview -->
+          <div id="progressImagePreviewContainer" style="display: none; margin-top: 10px;">
+            <div style="position: relative; display: inline-block;">
+              <img id="progressImagePreview" style="max-width: 100%; max-height: 180px; border-radius: 6px; border: 1px solid var(--border-color); object-fit: contain; background: #FFF; display: block;">
+              <button type="button" onclick="clearProgressImage()" style="position: absolute; top: -6px; right: -6px; background: #DC2626; color: #FFF; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; cursor: pointer; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 3px rgba(0,0,0,0.3);" title="이미지 제거">✕</button>
+            </div>
+          </div>
         </div>
         <div style="display: flex; gap: 10px;">
           <button type="submit" class="btn-primary" style="flex: 1; height: 44px; font-size: 15px;">진행사항 등록</button>
@@ -1223,7 +1245,7 @@
   <!-- Korean Choseong Engine -->
   <script src="js/choseong.js"></script>
   <!-- Core Logic Engine -->
-  <script src="js/app.js?v=37"></script>
+  <script src="js/app.js?v=38"></script>
   <script>
     lucide.createIcons();
   </script>
