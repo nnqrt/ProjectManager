@@ -565,10 +565,14 @@ window.deleteComplaint = function(id) {
   if (!confirm("해당 민원을 정말 삭제하시겠습니까? (삭제 시 관리자 통제 센터의 복구센터로 임시 보관됩니다)")) return;
   if (!appState.trashBin) appState.trashBin = [];
   
-  const comp = appState.complaints.find(c => String(c.id) === String(id));
+  const comp = (appState.complaints || []).find(c => String(c.id) === String(id));
   if (comp) {
     appState.trashBin.unshift({ ...comp, deletedAt: new Date().toLocaleString('ko-KR'), deletedBy: appState.currentUser.name, origType: 'COMP', origId: comp.id });
     appState.complaints = appState.complaints.filter(c => String(c.id) !== String(id));
+    // Remove linked schedule
+    if (appState.schedules) {
+      appState.schedules = appState.schedules.filter(s => s.complaintId !== id);
+    }
     saveState();
     renderModuleView();
   }
@@ -578,11 +582,13 @@ window.handleComplaintCreateSubmit = function(e) {
   e.preventDefault();
   const title = document.getElementById('compTitleInput').value.trim();
   const requester = document.getElementById('compRequesterInput').value.trim();
-  const date = document.getElementById('compDateInput').value;
+  let date = document.getElementById('compDateInput') ? document.getElementById('compDateInput').value : '';
+  if (!date) date = new Date().toISOString().slice(0, 10);
   const phone = document.getElementById('compPhoneInput').value.trim();
   const location = document.getElementById('compLocationInput').value.trim();
   const dept = document.getElementById('compDeptInput').value.trim();
   const content = document.getElementById('compContentInput').value.trim();
+  const addToSched = document.getElementById('compSchedInput') ? document.getElementById('compSchedInput').checked : false;
 
   const newId = 'CMP-' + String((appState.complaints ? appState.complaints.length : 0) + 1).padStart(3, '0');
   
@@ -590,22 +596,36 @@ window.handleComplaintCreateSubmit = function(e) {
   appState.complaints.unshift({
     id: newId,
     title: title,
-    date: date,
     requester: requester,
     phone: phone,
     location: location,
     dept: dept,
     step: '접수',
-    date: new Date().toLocaleDateString(),
+    date: date,
+    addToSched: addToSched,
     content: content
   });
+
+  // SYNC COMPLAINT TO 2번 일정표 (appState.schedules)
+  if (addToSched) {
+    if (!appState.schedules) appState.schedules = [];
+    appState.schedules.unshift({
+      id: 'sch-cmp-' + Date.now().toString().slice(-4),
+      title: '[민원] ' + title,
+      date: date,
+      time: '09:00',
+      location: location || '지역구',
+      dday: '지역',
+      alarm: true,
+      complaintId: newId
+    });
+  }
 
   saveState();
   closeComplaintCreateModal();
   renderModuleView();
-  alert("신규 민원이 성공적으로 접수 등록되었습니다. (민원번호: " + newId + ")");
+  alert("신규 민원이 성공적으로 접수 등록되었습니다." + (addToSched ? " (2번 일정표에도 등록되었습니다)" : ""));
 };
-
 window.overrideComplaintStep = function(id, newStep) {
   const comp = (appState.complaints || []).find(c => String(c.id) === String(id));
   if (!comp) return;
@@ -3224,6 +3244,44 @@ function isDateInRange(targetDateStr, startDateStr, endDateStr) {
 function renderModuleView() {
   const area = document.getElementById('moduleContentArea');
   const mod = appState.activeModuleTab;
+  // Auto-sync complaints and tasks that requested schedule
+  if (!appState.schedules) appState.schedules = [];
+  (appState.complaints || []).forEach(c => {
+    if (c.addToSched && !appState.schedules.some(s => s.complaintId === c.id)) {
+      let d = c.date;
+      if (d) {
+        const parsed = new Date(d.replace(/\.\s*/g, '-').replace(/-$/, ''));
+        if (!isNaN(parsed.getTime())) d = parsed.toISOString().slice(0, 10);
+      } else {
+        d = new Date().toISOString().slice(0, 10);
+      }
+      appState.schedules.unshift({
+        id: 'sch-cmp-' + c.id,
+        title: '[민원] ' + c.title,
+        date: d,
+        time: '09:00',
+        location: c.location || '지역구',
+        dday: '지역',
+        alarm: true,
+        complaintId: c.id
+      });
+    }
+  });
+  (appState.simpleTasks || []).forEach(t => {
+    if (t.addToSched && !appState.schedules.some(s => s.taskId === t.id)) {
+      appState.schedules.unshift({
+        id: 'sch-tsk-' + t.id,
+        title: '[안건] ' + t.title,
+        date: t.dueDate || new Date().toISOString().slice(0, 10),
+        time: '10:00',
+        location: '의원실',
+        dday: '관리',
+        alarm: true,
+        taskId: t.id
+      });
+    }
+  });
+
 
   // Auto-update event status
   const now = new Date();
@@ -3971,23 +4029,43 @@ function closeSimpleTaskCreateModal() {
 
 function handleSimpleTaskCreateSubmit(event) {
   event.preventDefault();
-  const title = document.getElementById('simpleTitleInput').value;
+  const title = document.getElementById('simpleTitleInput').value.trim();
   const assignee = document.getElementById('simpleAssigneeInput').value;
   const stage = document.getElementById('simpleStageInput').value;
-  const dueDate = document.getElementById('simpleDateInput').value;
+  let dueDate = document.getElementById('simpleDateInput') ? document.getElementById('simpleDateInput').value : '';
+  if (!dueDate) dueDate = new Date().toISOString().slice(0, 10);
+  const addToSched = document.getElementById('simpleSchedInput') ? document.getElementById('simpleSchedInput').checked : false;
 
+  const newTaskId = `tsk-${Date.now()}`;
+  if (!appState.simpleTasks) appState.simpleTasks = [];
   appState.simpleTasks.unshift({
-    id: `tsk-${Date.now()}`,
+    id: newTaskId,
     title: title,
     assignee: assignee,
     stage: stage,
     date: new Date().toLocaleDateString(),
-    dueDate: dueDate
+    dueDate: dueDate,
+    addToSched: addToSched
   });
+
+  // SYNC TASK TO 2번 일정표 (appState.schedules)
+  if (addToSched) {
+    if (!appState.schedules) appState.schedules = [];
+    appState.schedules.unshift({
+      id: 'sch-tsk-' + Date.now().toString().slice(-4),
+      title: '[안건] ' + title,
+      date: dueDate,
+      time: '10:00',
+      location: '의원실',
+      dday: '관리',
+      alarm: true,
+      taskId: newTaskId
+    });
+  }
 
   saveState();
   closeSimpleTaskCreateModal();
-  alert(`'${title}' 업무가 등록되었습니다.`);
+  alert(`'${title}' 업무가 등록되었습니다.` + (addToSched ? " (2번 일정표에도 등록되었습니다)" : ""));
   renderModuleView();
 }
 
@@ -4625,6 +4703,56 @@ function handleUniversalEditSubmit(e) {
         }
         return item;
       });
+    }
+  } else if (type === 'COMP') {
+    const editTitle = document.getElementById('editCompTitle').value.trim();
+    const editReq = document.getElementById('editCompReq').value.trim();
+    const editPhone = document.getElementById('editCompPhone').value.trim();
+    const editDate = document.getElementById('editCompDate').value;
+    const editLoc = document.getElementById('editCompLoc').value.trim();
+    const editContent = document.getElementById('editCompContent').value.trim();
+    const editSched = document.getElementById('editCompSched').checked;
+
+    appState.complaints = appState.complaints.map(item => {
+      if (String(item.id) === String(id)) {
+        return {
+          ...item,
+          title: editTitle,
+          requester: editReq,
+          phone: editPhone,
+          date: editDate,
+          location: editLoc,
+          content: editContent,
+          addToSched: editSched
+        };
+      }
+      return item;
+    });
+
+    // Sync to 2번 일정 (appState.schedules)
+    if (!appState.schedules) appState.schedules = [];
+    const existingSch = appState.schedules.find(s => s.complaintId === id);
+    if (editSched) {
+      if (existingSch) {
+        existingSch.title = '[민원] ' + editTitle;
+        existingSch.date = editDate;
+        existingSch.location = editLoc || '지역구';
+      } else {
+        appState.schedules.unshift({
+          id: 'sch-cmp-' + Date.now().toString().slice(-4),
+          title: '[민원] ' + editTitle,
+          date: editDate,
+          time: '09:00',
+          location: editLoc || '지역구',
+          dday: '지역',
+          alarm: true,
+          complaintId: id
+        });
+      }
+    } else {
+      if (existingSch) {
+        appState.schedules = appState.schedules.filter(s => s.complaintId !== id);
+      }
     }
   }
 
