@@ -3,14 +3,14 @@ function getScheduleColorStyle(tag) {
   if (!tag) return 'background: #F8FAFC; color: #334155; border-left: 3px solid #94A3B8;';
   
   // Schedule tags
-  if (tag.includes('국회일정')) return 'background: #EFF6FF; color: #1E3A8A; border-left: 3px solid #2563EB;'; // Deep Blue
-  if (tag.includes('지역구')) return 'background: #FDF4FF; color: #86198F; border-left: 3px solid #D946EF;'; // Fuchsia
-  if (tag.includes('정기회의')) return 'background: #F0FDF4; color: #14532D; border-left: 3px solid #16A34A;'; // Emerald
-  if (tag.includes('외부행사')) return 'background: #ECFEFF; color: #164E63; border-left: 3px solid #06B6D4;'; // Cyan
-  if (tag.includes('언론방송')) return 'background: #FFFBEB; color: #92400E; border-left: 3px solid #F59E0B;'; // Amber
-  if (tag.includes('당원조직')) return 'background: #F5F3FF; color: #4C1D95; border-left: 3px solid #7C3AED;'; // Violet
-  if (tag.includes('민원청취')) return 'background: #FDF2F8; color: #9D174D; border-left: 3px solid #EC4899;'; // Pink
-  if (tag.includes('긴급마감') || tag.includes('D-DAY')) return 'background: #FEF2F2; color: #991B1B; border-left: 3px solid #DC2626;'; // Red
+  if (tag.includes('회의')) return 'background: #EFF6FF; color: #1E3A8A; border-left: 3px solid #2563EB;'; // Deep Blue
+  if (tag.includes('방문')) return 'background: #FDF4FF; color: #86198F; border-left: 3px solid #D946EF;'; // Fuchsia
+  if (tag.includes('행사')) return 'background: #ECFEFF; color: #164E63; border-left: 3px solid #06B6D4;'; // Cyan
+  if (tag.includes('언론')) return 'background: #FFFBEB; color: #92400E; border-left: 3px solid #F59E0B;'; // Amber
+  if (tag.includes('관리')) return 'background: #F5F3FF; color: #4C1D95; border-left: 3px solid #7C3AED;'; // Violet
+  if (tag.includes('지역')) return 'background: #FDF2F8; color: #9D174D; border-left: 3px solid #EC4899;'; // Pink
+  if (tag.includes('긴급') || tag.includes('D-DAY')) return 'background: #FEF2F2; color: #991B1B; border-left: 3px solid #DC2626;'; // Red
+  if (tag.includes('비공식')) return 'background: #F8FAFC; color: #334155; border-left: 3px solid #94A3B8;'; // Gray
   
   // Event categories
   if (tag.includes('민원')) return 'background: #F5F3FF; color: #5B21B6; border-left: 3px solid #8B5CF6;'; // Purple
@@ -4298,15 +4298,14 @@ function openUniversalEditModal(type, id) {
         <div>
           <label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정 분류 (카테고리)</label>
           <select id="editSchDday" class="form-select" style="width: 100%; padding: 10px;">
-            <option value="국회일정" ${item.dday === '국회일정' ? 'selected' : ''}>국회일정 (본회의/상임위)</option>
-            <option value="지역구" ${item.dday === '지역구' ? 'selected' : ''}>지역구 방문 / 현장 점검</option>
-            <option value="정기회의" ${item.dday === '정기회의' ? 'selected' : ''}>정기 회의 (주간/월간)</option>
-            <option value="외부행사" ${item.dday === '외부행사' ? 'selected' : ''}>외부 행사 / 간담회</option>
-            <option value="언론방송" ${item.dday === '언론방송' ? 'selected' : ''}>방송 / 언론 인터뷰</option>
-            <option value="당원조직" ${item.dday === '당원조직' ? 'selected' : ''}>당원 / 조직 관리</option>
-            <option value="민원청취" ${item.dday === '민원청취' ? 'selected' : ''}>민원 청취 / 지역 주민</option>
-            <option value="긴급마감" ${item.dday === '긴급마감' ? 'selected' : ''}>긴급 / 법정 마감 (D-DAY)</option>
-            <option value="기타일정" ${item.dday === '기타일정' ? 'selected' : ''}>기타 개인/비공식 일정</option>
+            <option value="회의" ${item.dday === '회의' ? 'selected' : ''}>회의</option>
+            <option value="방문" ${item.dday === '방문' ? 'selected' : ''}>방문</option>
+            <option value="행사" ${item.dday === '행사' ? 'selected' : ''}>행사</option>
+            <option value="언론" ${item.dday === '언론' ? 'selected' : ''}>언론</option>
+            <option value="관리" ${item.dday === '관리' ? 'selected' : ''}>관리</option>
+            <option value="지역" ${item.dday === '지역' ? 'selected' : ''}>지역</option>
+            <option value="긴급" ${item.dday === '긴급' ? 'selected' : ''}>긴급</option>
+            <option value="비공식" ${item.dday === '비공식' ? 'selected' : ''}>비공식</option>
           </select>
         </div>
       </div>
@@ -4464,15 +4463,14 @@ function handleUniversalEditSubmit(e) {
         <div>
           <label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정 분류 (카테고리)</label>
           <select id="editSchDday" class="form-select" style="width: 100%; padding: 10px;">
-            <option value="국회일정" ${item.dday === '국회일정' ? 'selected' : ''}>국회일정 (본회의/상임위)</option>
-            <option value="지역구" ${item.dday === '지역구' ? 'selected' : ''}>지역구 방문 / 현장 점검</option>
-            <option value="정기회의" ${item.dday === '정기회의' ? 'selected' : ''}>정기 회의 (주간/월간)</option>
-            <option value="외부행사" ${item.dday === '외부행사' ? 'selected' : ''}>외부 행사 / 간담회</option>
-            <option value="언론방송" ${item.dday === '언론방송' ? 'selected' : ''}>방송 / 언론 인터뷰</option>
-            <option value="당원조직" ${item.dday === '당원조직' ? 'selected' : ''}>당원 / 조직 관리</option>
-            <option value="민원청취" ${item.dday === '민원청취' ? 'selected' : ''}>민원 청취 / 지역 주민</option>
-            <option value="긴급마감" ${item.dday === '긴급마감' ? 'selected' : ''}>긴급 / 법정 마감 (D-DAY)</option>
-            <option value="기타일정" ${item.dday === '기타일정' ? 'selected' : ''}>기타 개인/비공식 일정</option>
+            <option value="회의" ${item.dday === '회의' ? 'selected' : ''}>회의</option>
+            <option value="방문" ${item.dday === '방문' ? 'selected' : ''}>방문</option>
+            <option value="행사" ${item.dday === '행사' ? 'selected' : ''}>행사</option>
+            <option value="언론" ${item.dday === '언론' ? 'selected' : ''}>언론</option>
+            <option value="관리" ${item.dday === '관리' ? 'selected' : ''}>관리</option>
+            <option value="지역" ${item.dday === '지역' ? 'selected' : ''}>지역</option>
+            <option value="긴급" ${item.dday === '긴급' ? 'selected' : ''}>긴급</option>
+            <option value="비공식" ${item.dday === '비공식' ? 'selected' : ''}>비공식</option>
           </select>
         </div>
       </div>
@@ -4584,15 +4582,14 @@ function handleUniversalDelete() {
         <div>
           <label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정 분류 (카테고리)</label>
           <select id="editSchDday" class="form-select" style="width: 100%; padding: 10px;">
-            <option value="국회일정" ${item.dday === '국회일정' ? 'selected' : ''}>국회일정 (본회의/상임위)</option>
-            <option value="지역구" ${item.dday === '지역구' ? 'selected' : ''}>지역구 방문 / 현장 점검</option>
-            <option value="정기회의" ${item.dday === '정기회의' ? 'selected' : ''}>정기 회의 (주간/월간)</option>
-            <option value="외부행사" ${item.dday === '외부행사' ? 'selected' : ''}>외부 행사 / 간담회</option>
-            <option value="언론방송" ${item.dday === '언론방송' ? 'selected' : ''}>방송 / 언론 인터뷰</option>
-            <option value="당원조직" ${item.dday === '당원조직' ? 'selected' : ''}>당원 / 조직 관리</option>
-            <option value="민원청취" ${item.dday === '민원청취' ? 'selected' : ''}>민원 청취 / 지역 주민</option>
-            <option value="긴급마감" ${item.dday === '긴급마감' ? 'selected' : ''}>긴급 / 법정 마감 (D-DAY)</option>
-            <option value="기타일정" ${item.dday === '기타일정' ? 'selected' : ''}>기타 개인/비공식 일정</option>
+            <option value="회의" ${item.dday === '회의' ? 'selected' : ''}>회의</option>
+            <option value="방문" ${item.dday === '방문' ? 'selected' : ''}>방문</option>
+            <option value="행사" ${item.dday === '행사' ? 'selected' : ''}>행사</option>
+            <option value="언론" ${item.dday === '언론' ? 'selected' : ''}>언론</option>
+            <option value="관리" ${item.dday === '관리' ? 'selected' : ''}>관리</option>
+            <option value="지역" ${item.dday === '지역' ? 'selected' : ''}>지역</option>
+            <option value="긴급" ${item.dday === '긴급' ? 'selected' : ''}>긴급</option>
+            <option value="비공식" ${item.dday === '비공식' ? 'selected' : ''}>비공식</option>
           </select>
         </div>
       </div>
