@@ -3244,10 +3244,25 @@ function isDateInRange(targetDateStr, startDateStr, endDateStr) {
 function renderModuleView() {
   const area = document.getElementById('moduleContentArea');
   const mod = appState.activeModuleTab;
-  // Auto-sync complaints and tasks that requested schedule
+  // Auto-sync and deduplicate complaints and tasks in schedules
   if (!appState.schedules) appState.schedules = [];
+  const seenCmpIds = new Set();
+  const seenTaskIds = new Set();
+  appState.schedules = appState.schedules.filter(s => {
+    if (s.complaintId) {
+      if (seenCmpIds.has(s.complaintId)) return false;
+      seenCmpIds.add(s.complaintId);
+    }
+    if (s.taskId) {
+      if (seenTaskIds.has(s.taskId)) return false;
+      seenTaskIds.add(s.taskId);
+    }
+    return true;
+  });
+
   (appState.complaints || []).forEach(c => {
-    if (c.addToSched && !appState.schedules.some(s => s.complaintId === c.id)) {
+    if (c.addToSched && !seenCmpIds.has(c.id)) {
+      seenCmpIds.add(c.id);
       let d = c.date;
       if (d) {
         const parsed = new Date(d.replace(/\.\s*/g, '-').replace(/-$/, ''));
@@ -3267,8 +3282,10 @@ function renderModuleView() {
       });
     }
   });
+
   (appState.simpleTasks || []).forEach(t => {
-    if (t.addToSched && !appState.schedules.some(s => s.taskId === t.id)) {
+    if (t.addToSched && !seenTaskIds.has(t.id)) {
+      seenTaskIds.add(t.id);
       appState.schedules.unshift({
         id: 'sch-tsk-' + t.id,
         title: '[안건] ' + t.title,
@@ -3339,10 +3356,11 @@ function renderModuleView() {
           <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); min-height: 120px;">
             ${weekDates.map((wd, idx) => {
               const dayName = daysOfWeek[idx];
-              const scheds = appState.schedules.filter(s => isDateInRange(wd.dateStr, s.date, s.endDate || s.date));
+              const scheds = appState.schedules.filter(s => {
+                if (s.eventId && appState.eventsList.some(e => String(e.id) === String(s.eventId))) return false;
+                return isDateInRange(wd.dateStr, s.date, s.endDate || s.date);
+              });
               const evts = appState.eventsList.filter(e => isDateInRange(wd.dateStr, e.date, e.endDate));
-              const cmps = (appState.complaints || []).filter(c => c.addToSched && isDateInRange(wd.dateStr, c.date, c.date));
-              const tsks = (appState.simpleTasks || []).filter(t => t.addToSched && isDateInRange(wd.dateStr, t.date, t.date));
               return `
                 <div class="calendar-day-cell ${wd.isToday ? 'today' : ''}" style="min-height: 110px; padding: 8px;" onclick="switchModuleTab('mod-schedule')">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -3350,27 +3368,24 @@ function renderModuleView() {
                     ${wd.isToday ? '<span style="background: #D97706; color: #FFF; font-size: 10px; font-weight: 900; padding: 1px 5px; border-radius: 4px;">오늘</span>' : ''}
                   </div>
                   <div style="display: flex; flex-direction: column; gap: 4px;">
-                    ${scheds.map(s => `
-                      <div style="background: #EFF6FF; color: #1E3A8A; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #3B82F6;" title="${s.title}">
-                        ▪ ${s.title}
-                      </div>
-                    `).join('')}
+                    ${scheds.map(s => {
+                      let icon = '▪';
+                      if (s.complaintId || (s.title && s.title.startsWith('[민원]')) || s.dday === '지역') icon = '👂';
+                      else if (s.taskId || (s.title && s.title.startsWith('[안건]')) || s.dday === '관리') icon = '✓';
+                      else if (s.eventId || s.dday === '행사') icon = '★';
+                      else if (s.dday === '긴급') icon = '🚨';
+                      return `
+                        <div style="${getScheduleColorStyle(s.dday)}; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${s.title}">
+                          ${icon} ${s.title}
+                        </div>
+                      `;
+                    }).join('')}
                     ${evts.map(e => `
-                      <div style="background: #ECFEFF; color: #164E63; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #06B6D4;" title="${e.title}">
+                      <div style="${getScheduleColorStyle(e.category || '행사')}; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${e.title}">
                         ★ ${e.title}
                       </div>
                     `).join('')}
-                    ${cmps.map(c => `
-                      <div style="background: #FDF2F8; color: #9D174D; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #EC4899;" title="${c.title}">
-                        👂 ${c.title}
-                      </div>
-                    `).join('')}
-                    ${tsks.map(t => `
-                      <div style="background: #F5F3FF; color: #4C1D95; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #7C3AED;" title="${t.title}">
-                        ✓ ${t.title}
-                      </div>
-                    `).join('')}
-                    ${scheds.length === 0 && evts.length === 0 && cmps.length === 0 && tsks.length === 0 ? '<div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;">일정 없음</div>' : ''}
+                    ${scheds.length === 0 && evts.length === 0 ? '<div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;">일정 없음</div>' : ''}
                   </div>
                 </div>
               `;
@@ -3433,20 +3448,19 @@ function renderModuleView() {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
-      const matchingScheds = appState.schedules.filter(s => isDateInRange(dateStr, s.date, s.endDate || s.date));
+      const matchingScheds = appState.schedules.filter(s => {
+        if (s.eventId && appState.eventsList.some(e => String(e.id) === String(s.eventId))) return false;
+        return isDateInRange(dateStr, s.date, s.endDate || s.date);
+      });
       const matchingEvents = appState.eventsList.filter(e => isDateInRange(dateStr, e.date, e.endDate));
-      const matchingCmps = (appState.complaints || []).filter(c => c.addToSched && isDateInRange(dateStr, c.date, c.date));
-      const matchingTsks = (appState.simpleTasks || []).filter(t => t.addToSched && isDateInRange(dateStr, t.date, t.date));
       const isToday = (year === now.getFullYear() && month === now.getMonth() + 1 && day === now.getDate());
 
       const allItems = [
         ...matchingScheds.map(s => ({ type: 'sched', data: s })),
-        ...matchingEvents.map(e => ({ type: 'event', data: e })),
-        ...matchingCmps.map(c => ({ type: 'comp', data: c })),
-        ...matchingTsks.map(t => ({ type: 'task', data: t }))
+        ...matchingEvents.map(e => ({ type: 'event', data: e }))
       ];
-      const visibleItems = allItems.slice(0, 2);
-      const overflowCount = allItems.length - 2;
+      const visibleItems = allItems.slice(0, 3);
+      const overflowCount = allItems.length - 3;
 
       calendarCells += `
         <div class="calendar-day-cell ${isToday ? 'today' : ''}" data-date="${dateStr}" onclick="openScheduleCreateModal('${dateStr}')" ondragover="event.preventDefault(); this.style.background='#EFF6FF';" ondragleave="this.style.background='';" ondrop="event.preventDefault(); this.style.background=''; handleCalendarDrop(event, '${dateStr}');">
@@ -3454,15 +3468,20 @@ function renderModuleView() {
           ${visibleItems.map(item => {
             if (item.type === 'sched') {
               const s = item.data;
+              let icon = '▪';
+              if (s.complaintId || (s.title && s.title.startsWith('[민원]')) || s.dday === '지역') icon = '👂';
+              else if (s.taskId || (s.title && s.title.startsWith('[안건]')) || s.dday === '관리') icon = '✓';
+              else if (s.eventId || s.dday === '행사') icon = '★';
+              else if (s.dday === '긴급') icon = '🚨';
               return `
                 <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${s.id}')" onclick="event.stopPropagation(); openScheduleDetailModal('${s.id}')" title="${s.time || ''} ${s.title}" style="${getScheduleColorStyle(s.dday)}">
-                  ▪ ${s.title}
+                  ${icon} ${s.title}
                 </div>
               `;
             } else {
               const e = item.data;
               return `
-                <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${e.id}')" style="${getScheduleColorStyle(e.category)}; cursor: grab;" onclick="event.stopPropagation(); openEventDetailModal('${e.id}')" title="${e.title}">
+                <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${e.id}')" style="${getScheduleColorStyle(e.category || '행사')}; cursor: grab;" onclick="event.stopPropagation(); openEventDetailModal('${e.id}')" title="${e.title}">
                   ★ ${e.title}
                 </div>
               `;
