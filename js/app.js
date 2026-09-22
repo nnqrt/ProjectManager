@@ -3244,7 +3244,7 @@ function isDateInRange(targetDateStr, startDateStr, endDateStr) {
 function renderModuleView() {
   const area = document.getElementById('moduleContentArea');
   const mod = appState.activeModuleTab;
-  // Auto-sync and deduplicate complaints and tasks in schedules
+  // Clean up any duplicates in schedules
   if (!appState.schedules) appState.schedules = [];
   const seenCmpIds = new Set();
   const seenTaskIds = new Set();
@@ -3258,45 +3258,6 @@ function renderModuleView() {
       seenTaskIds.add(s.taskId);
     }
     return true;
-  });
-
-  (appState.complaints || []).forEach(c => {
-    if (c.addToSched && !seenCmpIds.has(c.id)) {
-      seenCmpIds.add(c.id);
-      let d = c.date;
-      if (d) {
-        const parsed = new Date(d.replace(/\.\s*/g, '-').replace(/-$/, ''));
-        if (!isNaN(parsed.getTime())) d = parsed.toISOString().slice(0, 10);
-      } else {
-        d = new Date().toISOString().slice(0, 10);
-      }
-      appState.schedules.unshift({
-        id: 'sch-cmp-' + c.id,
-        title: '[민원] ' + c.title,
-        date: d,
-        time: '09:00',
-        location: c.location || '지역구',
-        dday: '지역',
-        alarm: true,
-        complaintId: c.id
-      });
-    }
-  });
-
-  (appState.simpleTasks || []).forEach(t => {
-    if (t.addToSched && !seenTaskIds.has(t.id)) {
-      seenTaskIds.add(t.id);
-      appState.schedules.unshift({
-        id: 'sch-tsk-' + t.id,
-        title: '[안건] ' + t.title,
-        date: t.dueDate || new Date().toISOString().slice(0, 10),
-        time: '10:00',
-        location: '의원실',
-        dday: '관리',
-        alarm: true,
-        taskId: t.id
-      });
-    }
   });
 
 
@@ -4790,7 +4751,31 @@ function handleUniversalDelete() {
 
   if (type === 'SCHEDULE') {
     const item = appState.schedules.find(i => String(i.id) === String(id));
-    if (item) appState.trashBin.unshift({ ...item, deletedAt: new Date().toLocaleString('ko-KR'), deletedBy: appState.currentUser.name, origType: 'SCHEDULE', origId: item.id });
+    if (item) {
+      appState.trashBin.unshift({ ...item, deletedAt: new Date().toLocaleString('ko-KR'), deletedBy: appState.currentUser.name, origType: 'SCHEDULE', origId: item.id });
+      
+      // If linked to a complaint, uncheck addToSched on the complaint
+      const compId = item.complaintId || (item.id && item.id.startsWith('sch-cmp-') ? item.id.replace('sch-cmp-', '') : null);
+      if (compId) {
+        const comp = (appState.complaints || []).find(c => String(c.id) === String(compId) || (item.title && item.title.includes(c.title)));
+        if (comp) comp.addToSched = false;
+      } else if (item.title && item.title.startsWith('[민원]')) {
+        const rawTitle = item.title.replace('[민원]', '').trim();
+        const comp = (appState.complaints || []).find(c => c.title && c.title.trim() === rawTitle);
+        if (comp) comp.addToSched = false;
+      }
+
+      // If linked to a task, uncheck addToSched on the task
+      const tskId = item.taskId || (item.id && item.id.startsWith('sch-tsk-') ? item.id.replace('sch-tsk-', '') : null);
+      if (tskId) {
+        const task = (appState.simpleTasks || []).find(t => String(t.id) === String(tskId) || (item.title && item.title.includes(t.title)));
+        if (task) task.addToSched = false;
+      } else if (item.title && item.title.startsWith('[안건]')) {
+        const rawTitle = item.title.replace('[안건]', '').trim();
+        const task = (appState.simpleTasks || []).find(t => t.title && t.title.trim() === rawTitle);
+        if (task) task.addToSched = false;
+      }
+    }
     appState.schedules = appState.schedules.filter(item => String(item.id) !== String(id));
   } else if (type === 'EVENT') {
     const item = appState.eventsList.find(i => String(i.id) === String(id));
