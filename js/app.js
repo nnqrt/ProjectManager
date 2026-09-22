@@ -3158,6 +3158,14 @@ window.changeCalendarMonth = function(delta) {
   renderModuleView();
 };
 
+
+function isDateInRange(targetDateStr, startDateStr, endDateStr) {
+  if (!startDateStr) return false;
+  const target = new Date(targetDateStr).getTime();
+  const start = new Date(startDateStr.split(' ')[0]).getTime();
+  const end = endDateStr ? new Date(endDateStr.split(' ')[0]).getTime() : start;
+  return target >= start && target <= end;
+}
 function renderModuleView() {
   const area = document.getElementById('moduleContentArea');
   const mod = appState.activeModuleTab;
@@ -3218,8 +3226,10 @@ function renderModuleView() {
           <div class="calendar-grid" style="grid-template-columns: repeat(7, 1fr); min-height: 120px;">
             ${weekDates.map((wd, idx) => {
               const dayName = daysOfWeek[idx];
-              const scheds = appState.schedules.filter(s => s.date === wd.dateStr);
-              const evts = appState.eventsList.filter(e => e.date && e.date.startsWith(wd.dateStr));
+              const scheds = appState.schedules.filter(s => isDateInRange(wd.dateStr, s.date, s.endDate || s.date));
+              const evts = appState.eventsList.filter(e => isDateInRange(wd.dateStr, e.date, e.endDate));
+              const cmps = (appState.complaints || []).filter(c => isDateInRange(wd.dateStr, c.date, c.date));
+              const tsks = (appState.simpleTasks || []).filter(t => t.addToSched && isDateInRange(wd.dateStr, t.date, t.date));
               return `
                 <div class="calendar-day-cell ${wd.isToday ? 'today' : ''}" style="min-height: 110px; padding: 8px;" onclick="switchModuleTab('mod-schedule')">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -3233,11 +3243,21 @@ function renderModuleView() {
                       </div>
                     `).join('')}
                     ${evts.map(e => `
-                      <div style="background: #FEF2F2; color: #991B1B; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #EF4444;" title="${e.title}">
+                      <div style="background: #ECFEFF; color: #164E63; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #06B6D4;" title="${e.title}">
                         ★ ${e.title}
                       </div>
                     `).join('')}
-                    ${scheds.length === 0 && evts.length === 0 ? '<div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;">일정 없음</div>' : ''}
+                    ${cmps.map(c => `
+                      <div style="background: #FDF2F8; color: #9D174D; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #EC4899;" title="${c.title}">
+                        👂 ${c.title}
+                      </div>
+                    `).join('')}
+                    ${tsks.map(t => `
+                      <div style="background: #F5F3FF; color: #4C1D95; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-left: 3px solid #7C3AED;" title="${t.title}">
+                        ✓ ${t.title}
+                      </div>
+                    `).join('')}
+                    ${scheds.length === 0 && evts.length === 0 && cmps.length === 0 && tsks.length === 0 ? '<div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;">일정 없음</div>' : ''}
                   </div>
                 </div>
               `;
@@ -3300,13 +3320,17 @@ function renderModuleView() {
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
-      const matchingScheds = appState.schedules.filter(s => s.date === dateStr);
-      const matchingEvents = appState.eventsList.filter(e => e.date && e.date.startsWith(dateStr));
+      const matchingScheds = appState.schedules.filter(s => isDateInRange(dateStr, s.date, s.endDate || s.date));
+      const matchingEvents = appState.eventsList.filter(e => isDateInRange(dateStr, e.date, e.endDate));
+      const matchingCmps = (appState.complaints || []).filter(c => isDateInRange(dateStr, c.date, c.date));
+      const matchingTsks = (appState.simpleTasks || []).filter(t => t.addToSched && isDateInRange(dateStr, t.date, t.date));
       const isToday = (year === now.getFullYear() && month === now.getMonth() + 1 && day === now.getDate());
 
       const allItems = [
         ...matchingScheds.map(s => ({ type: 'sched', data: s })),
-        ...matchingEvents.map(e => ({ type: 'event', data: e }))
+        ...matchingEvents.map(e => ({ type: 'event', data: e })),
+        ...matchingCmps.map(c => ({ type: 'comp', data: c })),
+        ...matchingTsks.map(t => ({ type: 'task', data: t }))
       ];
       const visibleItems = allItems.slice(0, 2);
       const overflowCount = allItems.length - 2;
@@ -4107,18 +4131,7 @@ function handleEventCreateSubmit(e) {
     status: '준비중'
   });
 
-  // SYNC EVENT TO SCHEDULE
-  if (!appState.schedules) appState.schedules = [];
-  appState.schedules.unshift({
-    id: 'sch-' + Date.now().toString().slice(-3),
-    title: title,
-    date: date,
-    time: time,
-    location: loc,
-    dday: '행사',
-    alarm: true,
-    eventId: newEvtId
-  });
+
   saveState();
   closeEventCreateModal();
   renderModuleView();

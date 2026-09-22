@@ -676,9 +676,13 @@
             </select>
           </div>
         </div>
-        <div style="margin-bottom: 16px;">
+        <div style="margin-bottom: 12px;">
           <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">목표 마감일</label>
           <input type="date" id="simpleDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
+        </div>
+        <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="simpleSchedInput" style="width: 18px; height: 18px; cursor: pointer;">
+          <label for="simpleSchedInput" style="font-size: 14px; font-weight: 800; cursor: pointer;">달력(일정표)에 함께 등록하기</label>
         </div>
         <button type="submit" class="btn-primary" style="width: 100%; height: 46px; font-size: 16px;">
           업무 등록
@@ -1088,9 +1092,13 @@
             <input type="text" id="compRequesterInput" class="form-input" style="width: 100%; padding: 10px;" required>
           </div>
           <div>
-            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원인 연락처</label>
-            <input type="tel" id="compPhoneInput" class="form-input" style="width: 100%; padding: 10px;" placeholder="010-0000-0000" required>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">발생 일자</label>
+            <input type="date" id="compDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
           </div>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원인 연락처</label>
+          <input type="tel" id="compPhoneInput" class="form-input" style="width: 100%; padding: 10px;" placeholder="010-0000-0000" required>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
           <div>
