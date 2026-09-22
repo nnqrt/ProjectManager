@@ -3195,10 +3195,31 @@ window.changeCalendarMonth = function(delta) {
 
 function isDateInRange(targetDateStr, startDateStr, endDateStr) {
   if (!startDateStr) return false;
-  const target = new Date(targetDateStr).getTime();
-  const start = new Date(startDateStr.split(' ')[0]).getTime();
-  const end = endDateStr ? new Date(endDateStr.split(' ')[0]).getTime() : start;
-  return target >= start && target <= end;
+  
+  // Create Date objects safely by ignoring time and handling localized formats
+  const normalizeDate = (dStr) => {
+    let d = new Date(dStr);
+    if (isNaN(d.getTime())) {
+      // Try stripping out the time manually if standard parse fails
+      d = new Date(dStr.split(' ')[0]);
+    }
+    if (isNaN(d.getTime())) {
+      // Try replacing korean dots
+      d = new Date(dStr.replace(/\.\s*/g, '-').replace(/-$/, ''));
+    }
+    if (!isNaN(d.getTime())) d.setHours(0,0,0,0);
+    return d;
+  };
+  
+  let target = new Date(targetDateStr);
+  target.setHours(0,0,0,0);
+  
+  let start = normalizeDate(startDateStr);
+  let end = endDateStr ? normalizeDate(endDateStr) : start;
+  
+  if (isNaN(target.getTime()) || isNaN(start.getTime())) return false;
+  
+  return target.getTime() >= start.getTime() && target.getTime() <= end.getTime();
 }
 function renderModuleView() {
   const area = document.getElementById('moduleContentArea');
@@ -4469,6 +4490,16 @@ function openUniversalEditModal(type, id) {
   } else if (type === 'COMP') {
     const item = appState.complaints.find(c => String(c.id) === String(id));
     if (!item) return;
+    
+    // convert date format to YYYY-MM-DD for input type="date"
+    let safeDate = '';
+    if (item.date) {
+      const d = new Date(item.date.replace(/\.\s*/g, '-').replace(/-$/, ''));
+      if (!isNaN(d.getTime())) {
+        safeDate = d.toISOString().slice(0, 10);
+      }
+    }
+    
     html = `
       <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원 명칭</label><input type="text" id="editCompTitle" class="form-input" style="width:100%; padding:10px;" value="${item.title}" required></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -4476,7 +4507,7 @@ function openUniversalEditModal(type, id) {
         <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">연락처</label><input type="text" id="editCompPhone" class="form-input" style="width:100%; padding:10px;" value="${item.phone}" required></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">발생 일자</label><input type="date" id="editCompDate" class="form-input" style="width:100%; padding:10px;" value="${item.date || ''}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">발생 일자</label><input type="date" id="editCompDate" class="form-input" style="width:100%; padding:10px;" value="${safeDate}" required></div>
         <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">장소/주소</label><input type="text" id="editCompLoc" class="form-input" style="width:100%; padding:10px;" value="${item.location || ''}"></div>
       </div>
       <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원 내용</label><textarea id="editCompContent" class="form-textarea" style="width:100%; padding:10px; height:80px;" required>${item.content}</textarea></div>
