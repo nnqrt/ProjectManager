@@ -1,4 +1,13 @@
 
+// --- CLEARANCE FORMATTER ---
+window.formatClearance = function(clearance) {
+  if (clearance === '1급') return '최고 총괄';
+  if (clearance === '2급') return '중간결재자';
+  if (clearance === '3급') return '일반실무자';
+  return clearance || '중간결재자';
+};
+
+
 // --- TOTAL BUDGET & RESERVE BUDGET MODAL & APPROVAL WORKFLOW ---
 window.openReserveBudgetModal = function() {
   const current = appState.accountingSettings?.reserveBudget || 0;
@@ -1380,7 +1389,7 @@ async function handleLoginSubmit(e) {
     }
     
     if (profile.status === 'PENDING') {
-      alert("현재 가입 승인 대기 상태입니다. 최고관리자(1급)의 최종 승인 전까지 접근이 제한됩니다.");
+      alert("현재 가입 승인 대기 상태입니다. 최고 총괄(최종결재자)의 최종 승인 전까지 접근이 제한됩니다.");
       await supabaseClient.auth.signOut();
       return;
     }
@@ -1518,7 +1527,7 @@ async function handleLoginRegSubmit(e) {
       return;
     }
     
-    alert("가입 신청 완료 - 최고관리자(1급)의 승인 후 로그인 가능합니다. (보안 정책 적용됨)");
+    alert("가입 신청 완료 - 최고 총괄(최종결재자)의 승인 후 로그인 가능합니다. (보안 정책 적용됨)");
   } else {
     // Local Fallback
     const newId = 'usr-' + Date.now().toString().slice(-4);
@@ -1537,7 +1546,7 @@ async function handleLoginRegSubmit(e) {
 
     appState.users.push(newUser);
     localStorage.setItem('politic_sync_users', JSON.stringify(appState.users));
-    alert("가입 신청 완료 - 최고관리자(1급)의 승인 후 로그인 가능합니다. (보안 정책 적용됨)");
+    alert("가입 신청 완료 - 최고 총괄(최종결재자)의 승인 후 로그인 가능합니다. (보안 정책 적용됨)");
   }
   
   toggleLoginRegSection();
@@ -1725,9 +1734,9 @@ function openUserAuthModal() {
           </div>
           <div style="display: flex; gap: 6px; align-items: center;">
             <select id="modalPendingClearance_${u.id}" class="form-select" style="padding: 6px 10px; font-size: 13px; width: auto; font-weight: 800; border-color: #991B1B;" title="승인 시 부여할 등급 선택">
-              <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>2급 (중간결재권자)</option>
-              <option value="3급" ${u.clearance === '3급' || !u.clearance ? 'selected' : ''}>3급 (일반실무진)</option>
-              <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>1급 (최종결재권자)</option>
+              <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>중간결재자</option>
+              <option value="3급" ${u.clearance === '3급' || !u.clearance ? 'selected' : ''}>일반실무자</option>
+              <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>최고 총괄</option>
               <option value="회계관리" ${u.clearance === '회계관리' ? 'selected' : ''}>회계관리 (예산/경비)</option>
             </select>
             <button class="btn-primary" style="height: 36px; font-size: 13px; background: var(--approved-green);" onclick="approveUserRegistration('${u.id}')">정식 승인</button>
@@ -1757,7 +1766,7 @@ function openUserAuthModal() {
             ${u.photoUrl ? `<img src="${u.photoUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : (u.avatar && !u.avatar.startsWith('{') && !u.avatar.startsWith('data:image') ? u.avatar : (u.name ? u.name.charAt(0) : '류'))}
           </div>
           <div>
-            <div style="font-size: 16px; font-weight: 800; color: var(--text-dark);">${u.name} <span style="font-size:12px; color:var(--primary-navy);">${u.clearance || '2급'}</span> ${!isApproved ? '<strong style="color:#DC2626; font-size:12px;">가입 승인 대기중</strong>' : ''}</div>
+            <div style="font-size: 16px; font-weight: 800; color: var(--text-dark);">${u.name} <span style="font-size:12px; color:var(--primary-navy);">${formatClearance(u.clearance)}</span> ${!isApproved ? '<strong style="color:#DC2626; font-size:12px;">가입 승인 대기중</strong>' : ''}</div>
             <div style="font-size: 13px; font-weight: 700; color: var(--text-muted);">${u.roleTitle} | ${u.phone || '010-0000-0000'}</div>
           </div>
         </div>
@@ -1785,7 +1794,7 @@ function switchUser(userId) {
   const targetUser = appState.users.find(u => u.id === userId);
   if (targetUser) {
     if (targetUser.status === 'PENDING_APPROVAL') {
-      alert("관리자의 가입 승인이 완료되지 않은 대기 계정입니다. 1급 관리자 계정으로 승인 후 이용하세요.");
+      alert("관리자의 가입 승인이 완료되지 않은 대기 계정입니다. 최종결재자 계정으로 승인 후 이용하세요.");
       return;
     }
     appState.currentUser = targetUser;
@@ -2014,7 +2023,7 @@ function renderApproverModalList(list) {
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <input type="checkbox" class="approver-popup-cb" value="${u.id}" ${isChecked ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
                   <span style="font-size: 15px; font-weight: 800; color: var(--text-dark);">${u.name}</span>
-                  <span style="font-size: 13px; font-weight: 700; color: var(--text-muted);">${u.roleTitle} [${u.clearance || '2급'}]</span>
+                  <span style="font-size: 13px; font-weight: 700; color: var(--text-muted);">${u.roleTitle} [${formatClearance(u.clearance)}]</span>
                 </div>
                 ${isChecked ? '<span style="font-size: 12px; font-weight: 900; color: var(--primary-navy);">선택됨</span>' : ''}
               </label>
@@ -2071,7 +2080,7 @@ function switchTab(tabName) {
   if (tabName === 'adminView') {
     const isAdmin = isUserFinanceAdmin(appState.currentUser);
     if (!isAdmin) {
-      alert("접근 차단 - 1급 관리자 전용 통제 메뉴입니다. 일반 사용자에게는 메뉴가 표시되지 않으며 접근할 수 없습니다.");
+      alert("접근 차단 - 최종결재자 전용 통제 메뉴입니다. 일반 사용자에게는 메뉴가 표시되지 않으며 접근할 수 없습니다.");
       return;
     }
   }
@@ -2184,7 +2193,7 @@ function renderApp() {
           badge.textContent = '회계';
           badge.style.backgroundColor = '#047857';
         } else {
-          badge.textContent = '1급';
+          badge.textContent = '최고 총괄';
           badge.style.backgroundColor = '#991B1B';
         }
       }
@@ -4800,7 +4809,7 @@ function renderAdminView() {
   if (!isAdmin) {
     area.innerHTML = `
       <div class="card" style="border: 2px solid #DC2626; background: #FEF2F2; padding: 24px; text-align: center;">
-        <div style="font-size: 20px; font-weight: 900; color: #991B1B; margin-bottom: 12px;">접근 권한 제한 안내: 1급 최고관리자 전용 메뉴입니다.</div>
+        <div style="font-size: 20px; font-weight: 900; color: #991B1B; margin-bottom: 12px;">접근 권한 제한 안내: 최고 총괄(최종결재자) 전용 메뉴입니다.</div>
         <p style="font-size: 15px; color: #7F1D1D; margin-bottom: 18px;">
           본 통제 센터는 전사 인사/결재 통제 및 시스템 환경 설정 전용 영역입니다.<br>
           현재 접속 중인 <strong>${appState.currentUser ? appState.currentUser.name : ''} (${appState.currentUser ? appState.currentUser.roleTitle : ''})</strong> 님은 [${appState.currentUser ? appState.currentUser.clearance : '일반'}] 권한으로 관리자 메뉴 접근이 제한됩니다.
@@ -4817,7 +4826,7 @@ function renderAdminView() {
   if (isFinanceOnly && tab !== 'adm-finance') {
     area.innerHTML = `
       <div class="card" style="border: 2px solid #DC2626; background: #FEF2F2; padding: 24px; text-align: center;">
-        <div style="font-size: 20px; font-weight: 900; color: #991B1B; margin-bottom: 12px;">접근 권한 제한: 1급 최고관리자 전용 영역</div>
+        <div style="font-size: 20px; font-weight: 900; color: #991B1B; margin-bottom: 12px;">접근 권한 제한: 최고 총괄(최종결재자) 전용 영역</div>
         <p style="font-size: 15px; color: #7F1D1D; margin-bottom: 16px;">
           회계관리 계정은 <strong>[4.회계 장부]</strong> 메뉴만 접근 가능합니다.
         </p>
@@ -4870,11 +4879,11 @@ function renderAdminUsersTab(area) {
               </div>
               <div style="display: flex; gap: 8px; align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
-                  <span style="font-size: 11px; font-weight: 800; color: #991B1B;">부여할 권한 등급:</span>
+                  <span style="font-size: 11px; font-weight: 800; color: #991B1B;">부여할 권한 직위:</span>
                   <select id="pendingClearance_${u.id}" class="form-select" style="padding: 6px 10px; font-size: 13px; width: auto; font-weight: 800; border-color: #991B1B;" title="승인 시 부여할 등급 선택">
-                    <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>2급 (중간결재권자)</option>
-                    <option value="3급" ${u.clearance === '3급' || !u.clearance ? 'selected' : ''}>3급 (일반실무진)</option>
-                    <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>1급 (최종결재권자)</option>
+                    <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>중간결재자</option>
+                    <option value="3급" ${u.clearance === '3급' || !u.clearance ? 'selected' : ''}>일반실무자</option>
+                    <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>최고 총괄</option>
                     <option value="회계관리" ${u.clearance === '회계관리' ? 'selected' : ''}>회계관리 (예산/경비)</option>
                   </select>
                 </div>
@@ -4892,7 +4901,7 @@ function renderAdminUsersTab(area) {
     ${pendingHTML}
     <div class="card" style="margin-bottom: 0;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 2px solid var(--primary-navy); padding-bottom: 8px;">
-        <h3 style="font-size: 18px; font-weight: 900; color: var(--primary-navy);">의원실 회원 및 권한 등급 관리 (총 ${approvedUsers.length}명)</h3>
+        <h3 style="font-size: 18px; font-weight: 900; color: var(--primary-navy);">의원실 회원 및 권한 직위 관리 (총 ${approvedUsers.length}명)</h3>
         <button class="btn-outline" style="font-size: 13px; padding: 6px 12px;" onclick="openUserAuthModal()">+ 신규 회원 수동 등록</button>
       </div>
 
@@ -4905,7 +4914,7 @@ function renderAdminUsersTab(area) {
               </div>
               <div>
                 <div style="font-size: 16px; font-weight: 900; color: var(--text-dark);">
-                  ${u.name} <span style="font-size: 13px; color: ${u.clearance === '1급' ? '#991B1B' : 'var(--primary-navy)'}; font-weight: 800;">${u.clearance || '2급'}</span>
+                  ${u.name} <span style="font-size: 13px; color: ${u.clearance === '1급' ? '#991B1B' : 'var(--primary-navy)'}; font-weight: 800;">${formatClearance(u.clearance)}</span>
                   ${u.isAdmin ? '<span style="background:#991B1B; color:#FFF; font-size:11px; padding:2px 6px; border-radius:4px; margin-left:4px;">최고총괄</span>' : ''}
                 </div>
                 <div style="font-size: 13px; color: var(--text-muted); font-weight: 700;">${u.roleTitle} | 연락처: ${u.phone || '-'} | 접속ID: ${u.email}</div>
@@ -4913,9 +4922,9 @@ function renderAdminUsersTab(area) {
             </div>
             <div style="display: flex; gap: 6px; align-items: center;">
               <select class="form-select" style="padding: 6px 10px; font-size: 13px; width: auto;" onchange="adminChangeUserClearance('${u.id}', this.value)" ${u.isAdmin ? 'disabled' : ''}>
-                <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>1급 (최종결재권자)</option>
-                <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>2급 (중간결재권자)</option>
-                <option value="3급" ${u.clearance === '3급' ? 'selected' : ''}>3급 (일반실무진)</option>
+                <option value="1급" ${u.clearance === '1급' ? 'selected' : ''}>최고 총괄</option>
+                <option value="2급" ${u.clearance === '2급' ? 'selected' : ''}>중간결재자</option>
+                <option value="3급" ${u.clearance === '3급' ? 'selected' : ''}>일반실무자</option>
                 <option value="회계관리" ${u.clearance === '회계관리' ? 'selected' : ''}>회계관리 (예산/경비 트래킹)</option>
               </select>
               <button class="btn-outline" style="font-size: 13px; padding: 6px 10px; color: #DC2626; border-color: #DC2626;" onclick="adminDeleteUser('${u.id}')" ${u.isAdmin ? 'disabled' : ''}>계정 삭제</button>
@@ -4946,7 +4955,7 @@ window.approveUserRegistration = async function(userId) {
     }
   }
 
-  alert(`정식 승인 완료: ${user.name} 님의 가입 신청이 [${designatedClearance}] 등급으로 승인되었습니다.`);
+  alert(`정식 승인 완료: ${user.name} 님의 가입 신청이 [${formatClearance(designatedClearance)}] 직위로 승인되었습니다.`);
   const modal = document.getElementById('userAuthModal');
   if (modal && !modal.classList.contains('hidden')) {
     openUserAuthModal();
@@ -5015,14 +5024,14 @@ window.adminChangeUserClearance = async function(userId, newCls) {
       console.warn("Supabase clearance update error:", e);
     }
   }
-  alert(`권한 변경 완료: 해당 팀원의 결재 등급이 ${newCls}(으)로 변경되었습니다.`);
+  alert(`권한 변경 완료: 해당 팀원의 결재 직위이 ${formatClearance(newCls)}(으)로 변경되었습니다.`);
   renderAdminView();
 };
 
 window.adminDeleteUser = async function(userId) {
   const target = (appState.users || []).find(u => String(u.id) === String(userId));
   if (target && (target.isAdmin || target.email === 'nnqrt1983@gmail.com' || target.clearance === '1급')) {
-    alert("최고관리자(1급) 계정은 삭제할 수 없습니다.");
+    alert("최고 총괄(최종결재자) 계정은 삭제할 수 없습니다.");
     return;
   }
   if (!confirm("해당 계정을 완전히 삭제하시겠습니까?\n삭제 즉시 의원실 모든 명단 및 권한에서 영구 배제됩니다.")) return;
@@ -5111,7 +5120,7 @@ function renderAdminPipelineTab(area) {
 
 function adminOverrideTask(taskId, action) {
   const actionText = action === 'APPROVE' ? '최종 승인' : '반려';
-  if (!confirm(`1급 관리자 직권 통제\n해당 안건을 ${actionText} 처리하시겠습니까?`)) return;
+  if (!confirm(`최종결재자 직권 통제\n해당 안건을 ${actionText} 처리하시겠습니까?`)) return;
 
   const now = new Date().toLocaleString('ko-KR');
   appState.tasks = appState.tasks.map(t => {
@@ -5119,13 +5128,13 @@ function adminOverrideTask(taskId, action) {
       const newStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
       const updatedChain = (t.approvalChain || []).map(step => {
         if (step.status === 'PENDING' || step.status === 'WAITING') {
-          return { ...step, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED', timestamp: now, comment: `[1급 관리자(${appState.currentUser.name}) 직권 통제 처리]` };
+          return { ...step, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED', timestamp: now, comment: `[최종결재자(${appState.currentUser.name}) 직권 통제 처리]` };
         }
         return step;
       });
       const newAudit = [
         ...t.auditLogs,
-        { id: `log-${Date.now()}`, who: appState.currentUser.name, when: now, action: `[1급 관리자 직권 ${actionText} 완결]`, isFinalApproval: true }
+        { id: `log-${Date.now()}`, who: appState.currentUser.name, when: now, action: `[최종결재자 직권 ${actionText} 완결]`, isFinalApproval: true }
       ];
       return { ...t, status: newStatus, approvalChain: updatedChain, auditLogs: newAudit };
     }
@@ -5237,7 +5246,7 @@ function renderAdminConfigTab(area) {
   area.innerHTML = `
     <div class="card" style="margin-bottom: 16px;">
       <h3 style="font-size: 18px; font-weight: 900; color: var(--primary-navy); margin-bottom: 14px; border-bottom: 2px solid var(--primary-navy); padding-bottom: 8px;">
-        1급 최고관리자 시스템 환경 설정 및 데이터 백업 / 초기화
+        최고 총괄(최종결재자) 시스템 환경 설정 및 데이터 백업 / 초기화
       </h3>
       
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px;">
