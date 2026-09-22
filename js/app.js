@@ -606,25 +606,10 @@ window.handleComplaintCreateSubmit = function(e) {
     content: content
   });
 
-  // SYNC COMPLAINT TO 2번 일정표 (appState.schedules)
-  if (addToSched) {
-    if (!appState.schedules) appState.schedules = [];
-    appState.schedules.unshift({
-      id: 'sch-cmp-' + Date.now().toString().slice(-4),
-      title: '[민원] ' + title,
-      date: date,
-      time: '09:00',
-      location: location || '지역구',
-      dday: '지역',
-      alarm: true,
-      complaintId: newId
-    });
-  }
-
   saveState();
   closeComplaintCreateModal();
   renderModuleView();
-  alert("신규 민원이 성공적으로 접수 등록되었습니다." + (addToSched ? " (2번 일정표에도 등록되었습니다)" : ""));
+  alert("신규 민원이 성공적으로 접수 등록되었습니다." + (addToSched ? " (일정표에 해당 날짜 민원 건수로 반영됩니다)" : ""));
 };
 window.overrideComplaintStep = function(id, newStep) {
   const comp = (appState.complaints || []).find(c => String(c.id) === String(id));
@@ -3369,21 +3354,9 @@ function isDateInRange(targetDateStr, startDateStr, endDateStr) {
 function renderModuleView() {
   const area = document.getElementById('moduleContentArea');
   const mod = appState.activeModuleTab;
-  // Clean up any duplicates in schedules
+  // Clean up individual complaint schedules (complaints are shown by count on calendars)
   if (!appState.schedules) appState.schedules = [];
-  const seenCmpIds = new Set();
-  const seenTaskIds = new Set();
-  appState.schedules = appState.schedules.filter(s => {
-    if (s.complaintId) {
-      if (seenCmpIds.has(s.complaintId)) return false;
-      seenCmpIds.add(s.complaintId);
-    }
-    if (s.taskId) {
-      if (seenTaskIds.has(s.taskId)) return false;
-      seenTaskIds.add(s.taskId);
-    }
-    return true;
-  });
+  appState.schedules = appState.schedules.filter(s => !s.complaintId && (!s.id || !s.id.startsWith('sch-cmp-')) && (!s.title || !s.title.startsWith('[민원]')));
 
 
   // Auto-update event status
@@ -3447,6 +3420,7 @@ function renderModuleView() {
                 return isDateInRange(wd.dateStr, s.date, s.endDate || s.date);
               });
               const evts = appState.eventsList.filter(e => isDateInRange(wd.dateStr, e.date, e.endDate));
+              const cmps = (appState.complaints || []).filter(c => c.addToSched && isDateInRange(wd.dateStr, c.date, c.date));
               return `
                 <div class="calendar-day-cell ${wd.isToday ? 'today' : ''}" style="min-height: 110px; padding: 8px;" onclick="switchModuleTab('mod-schedule')">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -3456,8 +3430,7 @@ function renderModuleView() {
                   <div style="display: flex; flex-direction: column; gap: 4px;">
                     ${scheds.map(s => {
                       let icon = '▪';
-                      if (s.complaintId || (s.title && s.title.startsWith('[민원]')) || s.dday === '지역') icon = '👂';
-                      else if (s.taskId || (s.title && s.title.startsWith('[안건]')) || s.dday === '관리') icon = '✓';
+                      if (s.taskId || (s.title && s.title.startsWith('[안건]')) || s.dday === '관리') icon = '✓';
                       else if (s.eventId || s.dday === '행사') icon = '★';
                       else if (s.dday === '긴급') icon = '🚨';
                       return `
@@ -3471,7 +3444,12 @@ function renderModuleView() {
                         ★ ${e.title}
                       </div>
                     `).join('')}
-                    ${scheds.length === 0 && evts.length === 0 ? '<div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;">일정 없음</div>' : ''}
+                    ${cmps.length > 0 ? `
+                      <div style="${getScheduleColorStyle('지역')}; font-size: 11px; font-weight: 800; padding: 3px 6px; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;" onclick="event.stopPropagation(); switchModuleTab('mod-complaints');" title="해당 일자 민원 총 ${cmps.length}건 (클릭 시 민원 목록으로 이동)">
+                        👂 민원 ${cmps.length}건
+                      </div>
+                    ` : ''}
+                    ${scheds.length === 0 && evts.length === 0 && cmps.length === 0 ? '<div style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 16px;">일정 없음</div>' : ''}
                   </div>
                 </div>
               `;
@@ -3539,11 +3517,13 @@ function renderModuleView() {
         return isDateInRange(dateStr, s.date, s.endDate || s.date);
       });
       const matchingEvents = appState.eventsList.filter(e => isDateInRange(dateStr, e.date, e.endDate));
+      const matchingCmps = (appState.complaints || []).filter(c => c.addToSched && isDateInRange(dateStr, c.date, c.date));
       const isToday = (year === now.getFullYear() && month === now.getMonth() + 1 && day === now.getDate());
 
       const allItems = [
         ...matchingScheds.map(s => ({ type: 'sched', data: s })),
-        ...matchingEvents.map(e => ({ type: 'event', data: e }))
+        ...matchingEvents.map(e => ({ type: 'event', data: e })),
+        ...(matchingCmps.length > 0 ? [{ type: 'comp_summary', count: matchingCmps.length }] : [])
       ];
       const visibleItems = allItems.slice(0, 3);
       const overflowCount = allItems.length - 3;
@@ -3555,8 +3535,7 @@ function renderModuleView() {
             if (item.type === 'sched') {
               const s = item.data;
               let icon = '▪';
-              if (s.complaintId || (s.title && s.title.startsWith('[민원]')) || s.dday === '지역') icon = '👂';
-              else if (s.taskId || (s.title && s.title.startsWith('[안건]')) || s.dday === '관리') icon = '✓';
+              if (s.taskId || (s.title && s.title.startsWith('[안건]')) || s.dday === '관리') icon = '✓';
               else if (s.eventId || s.dday === '행사') icon = '★';
               else if (s.dday === '긴급') icon = '🚨';
               return `
@@ -3564,11 +3543,17 @@ function renderModuleView() {
                   ${icon} ${s.title}
                 </div>
               `;
-            } else {
+            } else if (item.type === 'event') {
               const e = item.data;
               return `
                 <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${e.id}')" style="${getScheduleColorStyle(e.category || '행사')}; cursor: grab;" onclick="event.stopPropagation(); openEventDetailModal('${e.id}')" title="${e.title}">
                   ★ ${e.title}
+                </div>
+              `;
+            } else if (item.type === 'comp_summary') {
+              return `
+                <div class="calendar-event-pill" style="${getScheduleColorStyle('지역')}; cursor: pointer;" onclick="event.stopPropagation(); switchModuleTab('mod-complaints');" title="해당 일자 민원 총 ${item.count}건 (클릭 시 민원 목록 이동)">
+                  👂 민원 ${item.count}건
                 </div>
               `;
             }
@@ -4834,30 +4819,9 @@ function handleUniversalEditSubmit(e) {
       return item;
     });
 
-    // Sync to 2번 일정 (appState.schedules)
-    if (!appState.schedules) appState.schedules = [];
-    const existingSch = appState.schedules.find(s => s.complaintId === id);
-    if (editSched) {
-      if (existingSch) {
-        existingSch.title = '[민원] ' + editTitle;
-        existingSch.date = editDate;
-        existingSch.location = editLoc || '지역구';
-      } else {
-        appState.schedules.unshift({
-          id: 'sch-cmp-' + Date.now().toString().slice(-4),
-          title: '[민원] ' + editTitle,
-          date: editDate,
-          time: '09:00',
-          location: editLoc || '지역구',
-          dday: '지역',
-          alarm: true,
-          complaintId: id
-        });
-      }
-    } else {
-      if (existingSch) {
-        appState.schedules = appState.schedules.filter(s => s.complaintId !== id);
-      }
+    // Clean up any individual schedule if present
+    if (appState.schedules) {
+      appState.schedules = appState.schedules.filter(s => s.complaintId !== id && s.id !== ('sch-cmp-' + id));
     }
   }
 
