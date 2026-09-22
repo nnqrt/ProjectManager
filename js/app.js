@@ -165,6 +165,7 @@ window.handleReopenComplaint = function(id) {
   const c = (appState.complaints || []).find(item => String(item.id) === String(id));
   if (!c) return;
   c.step = '접수';
+  if (!c.date) c.date = new Date().toISOString().slice(0, 10);
   saveState();
   renderModuleView();
   alert("해당 민원이 진행 중(접수 단계)으로 정상 복원되었습니다.");
@@ -554,6 +555,7 @@ window.updateComplaintStep = function(id, newStep) {
       const res = prompt("처리 결과를 간략히 입력하세요 (선택):", comp.resultText || "");
       if (res !== null) comp.resultText = res;
     }
+    if (!comp.date) comp.date = new Date().toISOString().slice(0, 10);
     saveState();
     renderModuleView();
   }
@@ -3539,7 +3541,7 @@ function renderModuleView() {
                     <span style="font-size: 12px; font-weight: 900; padding: 2px 8px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor};">${c.step}</span>
                     <span style="font-size: 12px; color: var(--text-muted);">${c.dept || '소관 미지정'}</span>
                   </div>
-                  <span style="font-size: 12px; color: var(--text-muted); font-weight: 700;">접수일: ${c.date}</span>
+                  <span style="font-size: 12px; color: var(--text-muted); font-weight: 700;">접수일: ${c.date || new Date().toISOString().slice(0, 10)}</span>
                 </div>
 
                 <h4 style="font-size: 17px; font-weight: 900; color: var(--text-dark); margin-bottom: 6px;">${c.title}</h4>
