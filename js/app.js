@@ -2870,6 +2870,40 @@ function openTaskDetailModal(taskId) {
   ` : '';
 
   modalBody.innerHTML = `
+    <!-- PROMINENT APPROVAL STATUS BANNER -->
+    ${task.status === 'APPROVED' ? `
+      <div style="background: #ECFDF5; border: 2px solid #10B981; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(16,185,129,0.15);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="background: #10B981; color: #FFF; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900;">✓</div>
+          <div>
+            <div style="font-size: 17px; font-weight: 900; color: #065F46;">전자결재 최종 승인 완료 (공식 완결)</div>
+            <div style="font-size: 13px; color: #047857; font-weight: 700; margin-top: 2px;">
+              최종결재권자(<strong>${task.finalApproverName || '의원/총괄'}</strong>)의 전자결재 승인이 완료되어 정식 집행 추진되는 안건입니다.
+            </div>
+          </div>
+        </div>
+        <div style="border: 2px solid #059669; color: #059669; font-size: 14px; font-weight: 900; padding: 4px 12px; border-radius: 6px; background: #FFF; transform: rotate(-4deg); box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+          승인완결印
+        </div>
+      </div>
+    ` : (task.status === 'REJECTED' ? `
+      <div style="background: #FEF2F2; border: 1.5px solid #DC2626; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 22px;">❌</span>
+        <div>
+          <div style="font-size: 15px; font-weight: 900; color: #991B1B;">반려 처리된 안건입니다</div>
+          <div style="font-size: 13px; color: #7F1D1D;">결재 의견을 확인하고 보완 후 다시 기안해 주시기 바랍니다.</div>
+        </div>
+      </div>
+    ` : `
+      <div style="background: #FFFBEB; border: 1.5px solid #F59E0B; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 22px;">⏳</span>
+        <div>
+          <div style="font-size: 15px; font-weight: 900; color: #92400E;">전자결재 진행 중 (승인 대기)</div>
+          <div style="font-size: 13px; color: #78350F;">결재권자의 최종 승인 완료 후 정식 집행 추진할 수 있습니다.</div>
+        </div>
+      </div>
+    `)}
+
     <div style="margin-bottom: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         ${getCategoryBadgeHTML(task.category)}
@@ -3055,11 +3089,38 @@ function renderAssigneeView() {
     const percent = t.progressPercent || (t.isCompleted ? 100 : 0);
     const color = getProgressColor(percent);
 
+    const isApproved = (t.status === 'APPROVED');
     return `
-      <div class="card card-clickable ${deadline.isUrgent && !t.isCompleted ? 'deadline-urgent-card' : ''}" style="display: flex; flex-direction: column; justify-content: space-between; border-left: 5px solid ${t.isCompleted ? '#047857' : color};" onclick="openTaskDetailModal('${t.id}')">
+      <div class="card card-clickable ${deadline.isUrgent && !t.isCompleted ? 'deadline-urgent-card' : ''}" style="position: relative; display: flex; flex-direction: column; justify-content: space-between; border-left: 5px solid ${t.isCompleted ? '#047857' : (isApproved ? '#10B981' : color)}; ${isApproved ? 'border: 1.5px solid #86EFAC; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.08);' : ''}" onclick="openTaskDetailModal('${t.id}')">
+        
+        <!-- OFFICIAL APPROVAL STAMP FOR APPROVED TASKS -->
+        ${isApproved ? `
+          <div style="position: absolute; top: 12px; right: 14px; border: 2px solid #059669; color: #059669; font-size: 13px; font-weight: 900; padding: 2px 8px; border-radius: 6px; transform: rotate(-5deg); pointer-events: none; opacity: 0.95; letter-spacing: 1px; background: #ECFDF5; box-shadow: 0 1px 3px rgba(5,150,105,0.2);">
+            결재 完
+          </div>
+        ` : ''}
+
         <div>
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 4px;">
-            ${getCategoryBadgeHTML(t.category)}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; padding-right: ${isApproved ? '70px' : '0'};">
+            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+              ${getCategoryBadgeHTML(t.category)}
+              
+              <!-- PROMINENT APPROVAL STATUS BADGE -->
+              ${isApproved ? `
+                <span style="background: #ECFDF5; color: #047857; font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 4px; border: 1.5px solid #10B981; display: inline-flex; align-items: center; gap: 3px;">
+                  <span>✅</span> 결재 승인 완료
+                </span>
+              ` : (t.status === 'REJECTED' ? `
+                <span style="background: #FEF2F2; color: #DC2626; font-size: 11px; font-weight: 900; padding: 2px 8px; border-radius: 4px; border: 1.5px solid #DC2626;">
+                  ❌ 결재 반려
+                </span>
+              ` : `
+                <span style="background: #FFFBEB; color: #D97706; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 4px; border: 1px solid #FCD34D;">
+                  ⏳ 결재 대기
+                </span>
+              `)}
+            </div>
+
             <div style="display: flex; gap: 6px; align-items: center;">
               ${deadline.isBlink && !t.isCompleted ? `
                 <span class="deadline-blink-badge">${deadline.label}</span>
@@ -3075,6 +3136,13 @@ function renderAssigneeView() {
               `)}
             </div>
           </div>
+
+          <!-- GREEN PROMOTION BANNER FOR APPROVED TASKS -->
+          ${isApproved ? `
+            <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 6px; padding: 5px 10px; margin-bottom: 8px; font-size: 12px; font-weight: 800; color: #15803D; display: flex; align-items: center; gap: 6px;">
+              <span>🎖️</span> <span>최종결재권자 승인 완료 — 정식 집행 추진 안건</span>
+            </div>
+          ` : ''}
 
           <h3 style="font-size: 18px; font-weight: 900; margin-bottom: 8px; line-height: 1.4; color: var(--text-dark);">${t.title}</h3>
 
@@ -3208,11 +3276,11 @@ function renderStaffView() {
       </thead>
       <tbody>
         ${filteredTasks.map(t => {
-          let approvalBadge = '<span style="color: var(--primary-navy); font-weight: 800; background: #EEF2F6; padding: 3px 8px; border-radius: 4px;">대기</span>';
+          let approvalBadge = '<span style="color: #D97706; font-weight: 800; background: #FFFBEB; padding: 3px 8px; border-radius: 4px; border: 1px solid #FCD34D;">⏳ 대기</span>';
           if (t.status === 'APPROVED') {
-            approvalBadge = '<span style="color: #047857; font-weight: 900; background: #ECFDF5; padding: 3px 8px; border-radius: 4px; border: 1px solid #A7F3D0;">승인</span>';
+            approvalBadge = '<span style="color: #047857; font-weight: 900; background: #ECFDF5; padding: 3px 10px; border-radius: 4px; border: 1.5px solid #10B981; display: inline-flex; align-items: center; gap: 4px;">✅ 승인완료</span>';
           } else if (t.status === 'REJECTED') {
-            approvalBadge = '<span style="color: #DC2626; font-weight: 900; background: #FEF2F2; padding: 3px 8px; border-radius: 4px; border: 1px solid #FECACA;">반려</span>';
+            approvalBadge = '<span style="color: #DC2626; font-weight: 900; background: #FEF2F2; padding: 3px 8px; border-radius: 4px; border: 1px solid #FECACA;">❌ 반려</span>';
           }
 
           let progressBadge = '';
