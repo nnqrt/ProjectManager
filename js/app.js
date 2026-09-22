@@ -4285,9 +4285,31 @@ function openUniversalEditModal(type, id) {
   let html = '';
 
   if (type === 'SCHEDULE') {
-    const item = appState.schedules.find(i => String(i.id) === String(id));
-    if (item) appState.trashBin.unshift({ ...item, deletedAt: new Date().toLocaleString('ko-KR'), deletedBy: appState.currentUser.name, origType: 'SCHEDULE', origId: item.id });
-    appState.schedules = appState.schedules.filter(item => String(item.id) !== String(id));
+    const item = appState.schedules.find(s => String(s.id) === String(id));
+    if (!item) return;
+    html = `
+      <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정/행사 명칭</label><input type="text" id="editSchTitle" class="form-input" style="width:100%; padding:10px;" value="${item.title}" required></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">날짜</label><input type="date" id="editSchDate" class="form-input" style="width:100%; padding:10px;" value="${item.date}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">시간</label><input type="time" id="editSchTime" class="form-input" style="width:100%; padding:10px;" value="${item.time || ''}"></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">장소/위치</label><input type="text" id="editSchLoc" class="form-input" style="width:100%; padding:10px;" value="${item.location || ''}"></div>
+        <div>
+          <label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정 분류 (카테고리)</label>
+          <select id="editSchDday" class="form-select" style="width: 100%; padding: 10px;">
+            <option value="회의" ${item.dday === '회의' ? 'selected' : ''}>회의</option>
+            <option value="방문" ${item.dday === '방문' ? 'selected' : ''}>방문</option>
+            <option value="행사" ${item.dday === '행사' ? 'selected' : ''}>행사</option>
+            <option value="언론" ${item.dday === '언론' ? 'selected' : ''}>언론</option>
+            <option value="관리" ${item.dday === '관리' ? 'selected' : ''}>관리</option>
+            <option value="지역" ${item.dday === '지역' ? 'selected' : ''}>지역</option>
+            <option value="긴급" ${item.dday === '긴급' ? 'selected' : ''}>긴급</option>
+            <option value="비공식" ${item.dday === '비공식' ? 'selected' : ''}>비공식</option>
+          </select>
+        </div>
+      </div>
+    `;
   } else if (type === 'EVENT') {
     const item = appState.eventsList.find(e => String(e.id) === String(id));
     if (!item) return;
@@ -4428,9 +4450,19 @@ function handleUniversalEditSubmit(e) {
   const id = document.getElementById('editItemId').value;
 
   if (type === 'SCHEDULE') {
-    const item = appState.schedules.find(i => String(i.id) === String(id));
-    if (item) appState.trashBin.unshift({ ...item, deletedAt: new Date().toLocaleString('ko-KR'), deletedBy: appState.currentUser.name, origType: 'SCHEDULE', origId: item.id });
-    appState.schedules = appState.schedules.filter(item => String(item.id) !== String(id));
+    appState.schedules = appState.schedules.map(item => {
+      if (String(item.id) === String(id)) {
+        return {
+          ...item,
+          title: document.getElementById('editSchTitle').value.trim(),
+          date: document.getElementById('editSchDate').value.trim(),
+          time: document.getElementById('editSchTime').value.trim(),
+          location: document.getElementById('editSchLoc').value.trim(),
+          dday: document.getElementById('editSchDday').value
+        };
+      }
+      return item;
+    });
   } else if (type === 'EVENT') {
     appState.eventsList = appState.eventsList.map(item => {
       if (String(item.id) === String(id)) {
