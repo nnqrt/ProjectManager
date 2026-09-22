@@ -1096,9 +1096,17 @@
             <input type="date" id="compDateInput" class="form-input" style="width: 100%; padding: 10px;" required>
           </div>
         </div>
-        <div style="margin-bottom: 12px;">
-          <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원인 연락처</label>
-          <input type="tel" id="compPhoneInput" class="form-input" style="width: 100%; padding: 10px;" placeholder="010-0000-0000" required>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 14px; font-weight: 800; display: block; margin-bottom: 4px;">민원인 연락처</label>
+            <input type="tel" id="compPhoneInput" class="form-input" style="width: 100%; padding: 10px;" placeholder="010-0000-0000" required>
+          </div>
+          <div style="display: flex; align-items: flex-end; padding-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="compSchedInput" style="width: 18px; height: 18px; cursor: pointer;">
+              <label for="compSchedInput" style="font-size: 14px; font-weight: 800; cursor: pointer;">일정표(달력)에 포함</label>
+            </div>
+          </div>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
           <div>

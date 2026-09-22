@@ -533,6 +533,7 @@ window.openComplaintCreateModal = function() {
   document.getElementById('compRequesterInput').value = '';
   document.getElementById('compDateInput').value = new Date().toISOString().slice(0, 10);
   document.getElementById('compPhoneInput').value = '';
+  document.getElementById('compSchedInput').checked = false;
   document.getElementById('compLocationInput').value = '';
   document.getElementById('compDeptInput').value = '';
   document.getElementById('compContentInput').value = '';
@@ -549,6 +550,10 @@ window.updateComplaintStep = function(id, newStep) {
   const comp = appState.complaints.find(c => String(c.id) === String(id));
   if (comp) {
     comp.step = newStep;
+    if (newStep === '처리완료') {
+      const res = prompt("처리 결과를 간략히 입력하세요 (선택):", comp.resultText || "");
+      if (res !== null) comp.resultText = res;
+    }
     saveState();
     renderModuleView();
   }
@@ -3255,7 +3260,7 @@ function renderModuleView() {
               const dayName = daysOfWeek[idx];
               const scheds = appState.schedules.filter(s => isDateInRange(wd.dateStr, s.date, s.endDate || s.date));
               const evts = appState.eventsList.filter(e => isDateInRange(wd.dateStr, e.date, e.endDate));
-              const cmps = (appState.complaints || []).filter(c => isDateInRange(wd.dateStr, c.date, c.date));
+              const cmps = (appState.complaints || []).filter(c => c.addToSched && isDateInRange(wd.dateStr, c.date, c.date));
               const tsks = (appState.simpleTasks || []).filter(t => t.addToSched && isDateInRange(wd.dateStr, t.date, t.date));
               return `
                 <div class="calendar-day-cell ${wd.isToday ? 'today' : ''}" style="min-height: 110px; padding: 8px;" onclick="switchModuleTab('mod-schedule')">
@@ -3349,7 +3354,7 @@ function renderModuleView() {
       const dateStr = `${year}-${month < 10 ? '0' + month : month}-${day < 10 ? '0' + day : day}`;
       const matchingScheds = appState.schedules.filter(s => isDateInRange(dateStr, s.date, s.endDate || s.date));
       const matchingEvents = appState.eventsList.filter(e => isDateInRange(dateStr, e.date, e.endDate));
-      const matchingCmps = (appState.complaints || []).filter(c => isDateInRange(dateStr, c.date, c.date));
+      const matchingCmps = (appState.complaints || []).filter(c => c.addToSched && isDateInRange(dateStr, c.date, c.date));
       const matchingTsks = (appState.simpleTasks || []).filter(t => t.addToSched && isDateInRange(dateStr, t.date, t.date));
       const isToday = (year === now.getFullYear() && month === now.getMonth() + 1 && day === now.getDate());
 
@@ -3544,6 +3549,7 @@ function renderModuleView() {
                 <p style="font-size: 14px; color: var(--text-dark); line-height: 1.5; background: #F8FAFC; padding: 10px 12px; border-radius: 6px; margin-bottom: 10px; border: 1px solid var(--border-color);">
                   ${c.content}
                 </p>
+                ${c.resultText ? `<div style="font-size: 13px; font-weight: 800; color: #047857; margin-bottom: 10px; background: #ECFDF5; padding: 8px; border-radius: 4px; border: 1px solid #10B981;">✅ 처리 결과: ${c.resultText}</div>` : ''}
 
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px;">
                   <div style="display: flex; align-items: center; gap: 4px;">
@@ -3553,6 +3559,7 @@ function renderModuleView() {
                     `).join('')}
                   </div>
                   <div style="display: flex; gap: 6px;">
+                    <button class="btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: var(--primary-navy); color: var(--primary-navy);" onclick="event.stopPropagation(); openUniversalEditModal('COMP', '${c.id}')">수정</button>
                     <button class="btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: #DC2626; color: #DC2626;" onclick="event.stopPropagation(); deleteComplaint('${c.id}')">삭제</button>
                   </div>
                 </div>
@@ -4464,6 +4471,25 @@ function openUniversalEditModal(type, id) {
     delBtn.style.display = (id === 'NEW') ? 'none' : 'block';
   }
 
+  } else if (type === 'COMP') {
+    const item = appState.complaints.find(c => String(c.id) === String(id));
+    if (!item) return;
+    html = `
+      <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원 명칭</label><input type="text" id="editCompTitle" class="form-input" style="width:100%; padding:10px;" value="${item.title}" required></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원인</label><input type="text" id="editCompReq" class="form-input" style="width:100%; padding:10px;" value="${item.requester}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">연락처</label><input type="text" id="editCompPhone" class="form-input" style="width:100%; padding:10px;" value="${item.phone}" required></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">발생 일자</label><input type="date" id="editCompDate" class="form-input" style="width:100%; padding:10px;" value="${item.date || ''}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">장소/주소</label><input type="text" id="editCompLoc" class="form-input" style="width:100%; padding:10px;" value="${item.location || ''}"></div>
+      </div>
+      <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원 내용</label><textarea id="editCompContent" class="form-textarea" style="width:100%; padding:10px; height:80px;" required>${item.content}</textarea></div>
+      <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+        <input type="checkbox" id="editCompSched" style="width:18px; height:18px;" ${item.addToSched ? 'checked' : ''}>
+        <label for="editCompSched" style="font-size:14px; font-weight:800;">일정표(달력)에 포함</label>
+      </div>
+    `;
   container.innerHTML = html;
   document.getElementById('universalEditModal').classList.remove('hidden');
 }
