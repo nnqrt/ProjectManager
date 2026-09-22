@@ -531,6 +531,7 @@ window.handleComplaintSearch = function(e) {
 window.openComplaintCreateModal = function() {
   document.getElementById('compTitleInput').value = '';
   document.getElementById('compRequesterInput').value = '';
+  document.getElementById('compDateInput').value = new Date().toISOString().slice(0, 10);
   document.getElementById('compPhoneInput').value = '';
   document.getElementById('compLocationInput').value = '';
   document.getElementById('compDeptInput').value = '';
@@ -542,10 +543,35 @@ window.closeComplaintCreateModal = function() {
   document.getElementById('complaintCreateModal').classList.add('hidden');
 };
 
+
+window.updateComplaintStep = function(id, newStep) {
+  if (!appState.complaints) return;
+  const comp = appState.complaints.find(c => String(c.id) === String(id));
+  if (comp) {
+    comp.step = newStep;
+    saveState();
+    renderModuleView();
+  }
+};
+
+window.deleteComplaint = function(id) {
+  if (!confirm("해당 민원을 정말 삭제하시겠습니까? (삭제 시 관리자 통제 센터의 복구센터로 임시 보관됩니다)")) return;
+  if (!appState.trashBin) appState.trashBin = [];
+  
+  const comp = appState.complaints.find(c => String(c.id) === String(id));
+  if (comp) {
+    appState.trashBin.unshift({ ...comp, deletedAt: new Date().toLocaleString('ko-KR'), deletedBy: appState.currentUser.name, origType: 'COMP', origId: comp.id });
+    appState.complaints = appState.complaints.filter(c => String(c.id) !== String(id));
+    saveState();
+    renderModuleView();
+  }
+};
+
 window.handleComplaintCreateSubmit = function(e) {
   e.preventDefault();
   const title = document.getElementById('compTitleInput').value.trim();
   const requester = document.getElementById('compRequesterInput').value.trim();
+  const date = document.getElementById('compDateInput').value;
   const phone = document.getElementById('compPhoneInput').value.trim();
   const location = document.getElementById('compLocationInput').value.trim();
   const dept = document.getElementById('compDeptInput').value.trim();
@@ -557,6 +583,7 @@ window.handleComplaintCreateSubmit = function(e) {
   appState.complaints.unshift({
     id: newId,
     title: title,
+    date: date,
     requester: requester,
     phone: phone,
     location: location,
@@ -3519,26 +3546,14 @@ function renderModuleView() {
                 </p>
 
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px;">
-                  <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 12px; font-weight: 800; color: var(--text-muted);">단계 변경:</span>
-                    <select class="form-select" style="font-size: 12px; padding: 4px 8px; font-weight: 800;" onchange="updateComplaintStep('${c.id}', this.value)">
-                      <option value="접수" ${c.step === '접수' ? 'selected' : ''}>1. 접수</option>
-                      <option value="구청이첩" ${c.step === '구청이첩' ? 'selected' : ''}>2. 구청이첩</option>
-                      <option value="현장점검" ${c.step === '현장점검' ? 'selected' : ''}>3. 현장점검</option>
-                      <option value="처리완료" ${c.step === '처리완료' ? 'selected' : ''}>4. 처리완료 (완료 페이지 이관)</option>
-                    </select>
+                  <div style="display: flex; align-items: center; gap: 4px;">
+                    <span style="font-size: 12px; font-weight: 800; color: var(--text-muted); margin-right: 4px;">단계:</span>
+                    ${['접수', '구청이첩', '현장점검', '처리완료'].map(s => `
+                      <button class="${c.step === s ? 'btn-primary' : 'btn-outline'}" style="font-size: 11px; padding: 4px 8px; ${c.step === s ? (s==='처리완료' ? 'background:#047857;border-color:#047857;' : '') : ''}" onclick="event.stopPropagation(); updateComplaintStep('${c.id}', '${s}')">${s}</button>
+                    `).join('')}
                   </div>
                   <div style="display: flex; gap: 6px;">
-                    ${c.step === '처리완료' ? `
-                      <button class="btn-outline" style="font-size: 12px; padding: 4px 10px; border-color: var(--primary-navy); color: var(--primary-navy);" onclick="handleReopenComplaint('${c.id}')">
-                        진행 중으로 복원
-                      </button>
-                    ` : `
-                      <button class="btn-primary" style="font-size: 12px; padding: 4px 12px; background: #047857; border-color: #047857;" onclick="updateComplaintStep('${c.id}', '처리완료')">
-                        처리완료 이관
-                      </button>
-                    `}
-                    <button class="btn-outline" style="font-size: 12px; padding: 4px 8px; color: #DC2626; border-color: #DC2626;" onclick="deleteComplaint('${c.id}')">삭제</button>
+                    <button class="btn-outline" style="font-size: 11px; padding: 4px 8px; border-color: #DC2626; color: #DC2626;" onclick="event.stopPropagation(); deleteComplaint('${c.id}')">삭제</button>
                   </div>
                 </div>
               </div>
@@ -5304,6 +5319,7 @@ function adminRestoreTrash(index) {
   else if (item.origType === 'PRESS') appState.pressList.unshift(item);
   else if (item.origType === 'MSG') appState.msgList.unshift(item);
   else if (item.origType === 'TASK') appState.tasks.unshift(item);
+    else if (item.origType === 'COMP') appState.complaints.unshift(item);
 
   saveState();
   alert("복구 완료 - 원래 데이터 리스트로 원상 복원되었습니다.");
