@@ -4464,13 +4464,6 @@ function openUniversalEditModal(type, id) {
         <textarea id="editCrmHistory" class="form-textarea" rows="4" style="width:100%; padding:10px;" placeholder="통화 기록 및 주요 관심사 등 메모">${item.history || ''}</textarea>
       </div>
     `;
-  }
-
-  const delBtn = document.querySelector('button[onclick="handleUniversalDelete()"]');
-  if (delBtn) {
-    delBtn.style.display = (id === 'NEW') ? 'none' : 'block';
-  }
-
   } else if (type === 'COMP') {
     const item = appState.complaints.find(c => String(c.id) === String(id));
     if (!item) return;
@@ -4490,6 +4483,11 @@ function openUniversalEditModal(type, id) {
         <label for="editCompSched" style="font-size:14px; font-weight:800;">일정표(달력)에 포함</label>
       </div>
     `;
+  }
+  const delBtn = document.querySelector('button[onclick="handleUniversalDelete()"]');
+  if (delBtn) {
+    delBtn.style.display = (id === 'NEW') ? 'none' : 'block';
+  }
   container.innerHTML = html;
   document.getElementById('universalEditModal').classList.remove('hidden');
 }
