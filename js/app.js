@@ -4672,12 +4672,13 @@ function openUniversalEditModal(type, id) {
       <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원 명칭</label><input type="text" id="editCompTitle" class="form-input" style="width:100%; padding:10px;" value="${item.title}" required></div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
         <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원인</label><input type="text" id="editCompReq" class="form-input" style="width:100%; padding:10px;" value="${item.requester}" required></div>
-        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">연락처</label><input type="text" id="editCompPhone" class="form-input" style="width:100%; padding:10px;" value="${item.phone}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">연락처 (선택)</label><input type="text" id="editCompPhone" class="form-input" style="width:100%; padding:10px;" value="${item.phone || ''}" placeholder="010-0000-0000 (선택)"></div>
       </div>
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
         <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">발생 일자</label><input type="date" id="editCompDate" class="form-input" style="width:100%; padding:10px;" value="${safeDate}" required></div>
         <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">장소/주소</label><input type="text" id="editCompLoc" class="form-input" style="width:100%; padding:10px;" value="${item.location || ''}"></div>
       </div>
+      <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">소관 / 이첩 대상 부서 (선택)</label><input type="text" id="editCompDept" class="form-input" style="width:100%; padding:10px;" value="${item.dept || ''}" placeholder="예: 구청 도로교통과, 환경보전과 (선택)"></div>
       <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">민원 내용</label><textarea id="editCompContent" class="form-textarea" style="width:100%; padding:10px; height:80px;" required>${item.content}</textarea></div>
       <div style="display:flex; align-items:center; gap:8px; margin-top:8px;">
         <input type="checkbox" id="editCompSched" style="width:18px; height:18px;" ${item.addToSched ? 'checked' : ''}>
@@ -4801,6 +4802,7 @@ function handleUniversalEditSubmit(e) {
     const editDate = document.getElementById('editCompDate').value;
     const editLoc = document.getElementById('editCompLoc').value.trim();
     const editContent = document.getElementById('editCompContent').value.trim();
+    const editDept = document.getElementById('editCompDept') ? document.getElementById('editCompDept').value.trim() : '';
     const editSched = document.getElementById('editCompSched').checked;
 
     appState.complaints = appState.complaints.map(item => {
@@ -4810,6 +4812,7 @@ function handleUniversalEditSubmit(e) {
           title: editTitle,
           requester: editReq,
           phone: editPhone,
+          dept: editDept || item.dept || '',
           date: editDate,
           location: editLoc,
           content: editContent,
