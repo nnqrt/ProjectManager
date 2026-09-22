@@ -1,4 +1,22 @@
 
+function getScheduleColorStyle(tag) {
+  if (!tag) return 'background: #F8FAFC; color: #334155; border-left: 3px solid #94A3B8;';
+  // Schedule tags
+  if (tag.includes('D-DAY')) return 'background: #FEF2F2; color: #991B1B; border-left: 3px solid #EF4444;';
+  if (tag.includes('D-3')) return 'background: #FFF7ED; color: #C2410C; border-left: 3px solid #F97316;';
+  if (tag.includes('D-7')) return 'background: #FEFCE8; color: #854D0E; border-left: 3px solid #EAB308;';
+  if (tag.includes('회의')) return 'background: #F0FDF4; color: #166534; border-left: 3px solid #22C55E;';
+  if (tag.includes('행사')) return 'background: #EFF6FF; color: #1E40AF; border-left: 3px solid #3B82F6;';
+  // Event categories
+  if (tag.includes('민원')) return 'background: #F5F3FF; color: #5B21B6; border-left: 3px solid #8B5CF6;'; // Purple
+  if (tag.includes('일정행사')) return 'background: #EFF6FF; color: #1E40AF; border-left: 3px solid #3B82F6;'; // Blue
+  if (tag.includes('조직인사')) return 'background: #F0FDF4; color: #166534; border-left: 3px solid #22C55E;'; // Green
+  if (tag.includes('홍보보도')) return 'background: #FFF7ED; color: #C2410C; border-left: 3px solid #F97316;'; // Orange
+  if (tag.includes('정책공약')) return 'background: #FEFCE8; color: #854D0E; border-left: 3px solid #EAB308;'; // Yellow
+  if (tag.includes('예산지출')) return 'background: #FEF2F2; color: #991B1B; border-left: 3px solid #EF4444;'; // Red
+  return 'background: #F8FAFC; color: #334155; border-left: 3px solid #94A3B8;';
+}
+
 // --- CLEARANCE FORMATTER ---
 window.formatClearance = function(clearance) {
   if (clearance === '1급') return '최고 총괄';
@@ -3230,7 +3248,7 @@ function renderModuleView() {
           </div>
           <div style="display: flex; flex-direction: column; gap: 10px;">
             ${todayEvents.map(evt => `
-              <div style="background: #FFF; border: 1px solid var(--border-color); border-left: 5px solid #DC2626; padding: 14px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+              <div style="background: #FFF; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; display: flex; justify-content: space-between; align-items: center; ${getScheduleColorStyle(evt.category)}">
                 <div>
                   <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
                     <span style="background: #FEF2F2; color: #991B1B; border: 1px solid #991B1B; font-size: 11px; font-weight: 900; padding: 2px 6px; border-radius: 4px;">오늘 행사: ${evt.status}</span>
@@ -3294,14 +3312,14 @@ function renderModuleView() {
             if (item.type === 'sched') {
               const s = item.data;
               return `
-                <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${s.id}')" onclick="event.stopPropagation(); openScheduleDetailModal('${s.id}')" title="${s.time || ''} ${s.title}">
+                <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${s.id}')" onclick="event.stopPropagation(); openScheduleDetailModal('${s.id}')" title="${s.time || ''} ${s.title}" style="${getScheduleColorStyle(s.dday)}">
                   ▪ ${s.title}
                 </div>
               `;
             } else {
               const e = item.data;
               return `
-                <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${e.id}')" style="background:#FEF2F2; color:#991B1B; border-left:3px solid #EF4444; cursor: grab;" onclick="event.stopPropagation(); openEventDetailModal('${e.id}')" title="${e.title}">
+                <div class="calendar-event-pill" draggable="true" ondragstart="handleCalendarDragStart(event, '${e.id}')" style="${getScheduleColorStyle(e.category)}; cursor: grab;" onclick="event.stopPropagation(); openEventDetailModal('${e.id}')" title="${e.title}">
                   ★ ${e.title}
                 </div>
               `;
@@ -3342,7 +3360,7 @@ function renderModuleView() {
           <h4 style="font-size: 16px; font-weight: 900; color: var(--primary-navy); margin-bottom: 10px;">다가오는 주요 일정</h4>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             ${appState.schedules.slice(0, 5).map(s => `
-              <div class="card-clickable" style="background: #F8FAFC; border: 1px solid var(--border-color); padding: 10px 14px; border-radius: 8px; display: flex; align-items: center; gap: 10px;" onclick="openScheduleDetailModal('${s.id}')">
+              <div class="card-clickable" style="${getScheduleColorStyle(s.dday)}; border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px;" onclick="openScheduleDetailModal('${s.id}')">
                 <span style="background: var(--primary-navy); color: #FFF; font-size: 15px; font-weight: 900; padding: 4px 10px; border-radius: 6px;">${s.dday || 'D-?'}</span>
                 <div>
                   <div style="font-size: 15px; font-weight: 800;">${s.title}</div>
@@ -4260,7 +4278,30 @@ function openUniversalEditModal(type, id) {
   const container = document.getElementById('editModalFieldsContainer');
   let html = '';
 
-  if (type === 'EVENT') {
+  if (type === 'SCHEDULE') {
+    const item = appState.schedules.find(s => String(s.id) === String(id));
+    if (!item) return;
+    html = `
+      <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정/행사 명칭</label><input type="text" id="editSchTitle" class="form-input" style="width:100%; padding:10px;" value="${item.title}" required></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">날짜</label><input type="date" id="editSchDate" class="form-input" style="width:100%; padding:10px;" value="${item.date}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">시간</label><input type="time" id="editSchTime" class="form-input" style="width:100%; padding:10px;" value="${item.time || ''}"></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">장소/위치</label><input type="text" id="editSchLoc" class="form-input" style="width:100%; padding:10px;" value="${item.location || ''}"></div>
+        <div>
+          <label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">D-Day / 구분 항목</label>
+          <select id="editSchDday" class="form-select" style="width: 100%; padding: 10px;">
+            <option value="D-DAY" ${item.dday === 'D-DAY' ? 'selected' : ''}>D-DAY (긴급 / 법정마감)</option>
+            <option value="D-3" ${item.dday === 'D-3' ? 'selected' : ''}>D-3 (임박)</option>
+            <option value="D-7" ${item.dday === 'D-7' ? 'selected' : ''}>D-7 (일주일전)</option>
+            <option value="회의" ${item.dday === '회의' ? 'selected' : ''}>정기 회의</option>
+            <option value="행사" ${item.dday === '행사' ? 'selected' : ''}>현장 행사</option>
+          </select>
+        </div>
+      </div>
+    `;
+  } else if (type === 'EVENT') {
     const item = appState.eventsList.find(e => String(e.id) === String(id));
     if (!item) return;
     const [sDate, sTime] = (item.date || '2026-07-01 14:00').split(' ');
@@ -4399,7 +4440,30 @@ function handleUniversalEditSubmit(e) {
   const type = document.getElementById('editItemType').value;
   const id = document.getElementById('editItemId').value;
 
-  if (type === 'EVENT') {
+  if (type === 'SCHEDULE') {
+    const item = appState.schedules.find(s => String(s.id) === String(id));
+    if (!item) return;
+    html = `
+      <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정/행사 명칭</label><input type="text" id="editSchTitle" class="form-input" style="width:100%; padding:10px;" value="${item.title}" required></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">날짜</label><input type="date" id="editSchDate" class="form-input" style="width:100%; padding:10px;" value="${item.date}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">시간</label><input type="time" id="editSchTime" class="form-input" style="width:100%; padding:10px;" value="${item.time || ''}"></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">장소/위치</label><input type="text" id="editSchLoc" class="form-input" style="width:100%; padding:10px;" value="${item.location || ''}"></div>
+        <div>
+          <label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">D-Day / 구분 항목</label>
+          <select id="editSchDday" class="form-select" style="width: 100%; padding: 10px;">
+            <option value="D-DAY" ${item.dday === 'D-DAY' ? 'selected' : ''}>D-DAY (긴급 / 법정마감)</option>
+            <option value="D-3" ${item.dday === 'D-3' ? 'selected' : ''}>D-3 (임박)</option>
+            <option value="D-7" ${item.dday === 'D-7' ? 'selected' : ''}>D-7 (일주일전)</option>
+            <option value="회의" ${item.dday === '회의' ? 'selected' : ''}>정기 회의</option>
+            <option value="행사" ${item.dday === '행사' ? 'selected' : ''}>현장 행사</option>
+          </select>
+        </div>
+      </div>
+    `;
+  } else if (type === 'EVENT') {
     appState.eventsList = appState.eventsList.map(item => {
       if (String(item.id) === String(id)) {
         return {
@@ -4492,7 +4556,30 @@ function handleUniversalDelete() {
 
   if (!appState.trashBin) appState.trashBin = [];
 
-  if (type === 'EVENT') {
+  if (type === 'SCHEDULE') {
+    const item = appState.schedules.find(s => String(s.id) === String(id));
+    if (!item) return;
+    html = `
+      <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">일정/행사 명칭</label><input type="text" id="editSchTitle" class="form-input" style="width:100%; padding:10px;" value="${item.title}" required></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">날짜</label><input type="date" id="editSchDate" class="form-input" style="width:100%; padding:10px;" value="${item.date}" required></div>
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">시간</label><input type="time" id="editSchTime" class="form-input" style="width:100%; padding:10px;" value="${item.time || ''}"></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">장소/위치</label><input type="text" id="editSchLoc" class="form-input" style="width:100%; padding:10px;" value="${item.location || ''}"></div>
+        <div>
+          <label style="font-size:14px; font-weight:800; display:block; margin-bottom:4px;">D-Day / 구분 항목</label>
+          <select id="editSchDday" class="form-select" style="width: 100%; padding: 10px;">
+            <option value="D-DAY" ${item.dday === 'D-DAY' ? 'selected' : ''}>D-DAY (긴급 / 법정마감)</option>
+            <option value="D-3" ${item.dday === 'D-3' ? 'selected' : ''}>D-3 (임박)</option>
+            <option value="D-7" ${item.dday === 'D-7' ? 'selected' : ''}>D-7 (일주일전)</option>
+            <option value="회의" ${item.dday === '회의' ? 'selected' : ''}>정기 회의</option>
+            <option value="행사" ${item.dday === '행사' ? 'selected' : ''}>현장 행사</option>
+          </select>
+        </div>
+      </div>
+    `;
+  } else if (type === 'EVENT') {
     const item = appState.eventsList.find(i => String(i.id) === String(id));
     if (item) appState.trashBin.unshift({ ...item, deletedAt: new Date().toLocaleString('ko-KR'), deletedBy: appState.currentUser.name, origType: 'EVENT', origId: item.id });
     appState.eventsList = appState.eventsList.filter(item => String(item.id) !== String(id));
@@ -4553,6 +4640,9 @@ function openScheduleDetailModal(id) {
     <div style="font-size: 16px; margin-bottom: 14px;">디데이: <strong>${sched.dday}</strong></div>
     <div style="background: #F8FAFC; padding: 12px; border-radius: 6px; font-size: 14px; color: var(--text-muted);">
       [자동 알림 설정]: 1일 전 / 1시간 전 푸시 알림 설정됨.
+    </div>
+    <div style="margin-top: 14px; display: flex; gap: 8px;">
+      <button class="btn-outline" style="font-size: 13px; padding: 6px 12px; border-color: var(--primary-navy); color: var(--primary-navy);" onclick="closeModuleDetailModal(); openUniversalEditModal('SCHEDULE', '${sched.id}');">일정 수정 / 삭제</button>
     </div>
   `;
   document.getElementById('moduleDetailModal').classList.remove('hidden');
